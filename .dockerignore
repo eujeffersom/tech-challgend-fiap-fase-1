@@ -1,0 +1,13 @@
+.git/
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+.DS_Store
+
+data/raw/*
+data/processed/*
+mlruns/
+mlflow.db
+anotacoes

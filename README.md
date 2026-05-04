@@ -175,7 +175,37 @@ Testes implementados:
 - Schema validation
 - API test
 
-### 6. Fluxo Completo do Zero
+### 6. Rodando com Docker (Deploy)
+
+A API foi dockerizada para facilitar o deploy em producao. Com os artefatos de modelo gerados no
+passo 3, basta buildar e rodar o conteiner.
+
+Build da imagem:
+
+```bash
+docker build -t telco-churn-api .
+```
+
+Executar o conteiner mapeando a porta 8000:
+
+```bash
+docker run -p 8000:8000 telco-churn-api
+```
+
+Depois acesse:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Com Make:
+
+```bash
+make docker-build
+make docker-run
+```
+
+### 7. Fluxo Completo do Zero
 
 ```bash
 uv python install 3.14.4
@@ -196,6 +226,12 @@ Para visualizar as experimentacoes e comparar o baseline Scikit-Learn com a MLP 
 
 ```bash
 uv run --python 3.14.4 mlflow ui
+```
+
+Com Make:
+
+```bash
+make mlflow
 ```
 
 Acesse:
