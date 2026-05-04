@@ -21,6 +21,8 @@ Consulte a documentacao complementar:
 
 - [Arquitetura de Deploy e Monitoramento](docs/deploy_architecture.md)
 - [Model Card (Performance e Vieses)](docs/model_card.md)
+- [Plano de Monitoramento](docs/monitoring_plan.md)
+- [Roteiro do Video STAR](docs/video_star_script.md)
 - [ML Canvas](docs/ml_canvas.md)
 
 ## Estrutura do Repositorio
@@ -318,6 +320,18 @@ Metricas rastreadas:
 - Testes automatizados com Pytest.
 - Linting com Ruff.
 - Model Card documentando limitacoes e vieses.
+- Plano de monitoramento com metricas, alertas e playbook de resposta.
+- Roteiro de video de 5 minutos usando metodo STAR.
+
+## Entrega Final
+
+A documentacao final consolida a decisao de arquitetura, os riscos do modelo e o plano operacional
+para colocar a solucao em producao:
+
+- Model Card completo: `docs/model_card.md`.
+- Arquitetura real-time vs. batch e justificativa: `docs/deploy_architecture.md`.
+- Plano de monitoramento: `docs/monitoring_plan.md`.
+- Roteiro para gravacao do video de 5 minutos no metodo STAR: `docs/video_star_script.md`.
 
 ## Verificacao Final
 
