@@ -144,10 +144,7 @@ def evaluate_baselines(x: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
         test_metrics["pr_auc"] = float(average_precision_score(y_test, y_prob))
         row = {"model": model_name}
         row.update(
-            {
-                f"cv_{metric}": float(np.mean(cv_results[f"test_{metric}"]))
-                for metric in scoring
-            }
+            {f"cv_{metric}": float(np.mean(cv_results[f"test_{metric}"])) for metric in scoring}
         )
         row.update({f"test_{metric}": value for metric, value in test_metrics.items()})
         rows.append(row)

@@ -21,13 +21,26 @@ def load_churn_csv(path: str | Path) -> pd.DataFrame:
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset nao encontrado: {csv_path}")
 
-    df = pd.read_csv(csv_path)
+    df = prepare_raw_churn_dataframe(pd.read_csv(csv_path))
     try:
         validate_raw_churn_schema(df)
     except SchemaErrors as exc:
         logger.info("raw_schema_validation_failed", failures=str(exc.failure_cases.head()))
         raise
     return normalize_churn_dataframe(df)
+
+
+def prepare_raw_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Ajusta valores brutos conhecidos antes da validacao de schema."""
+
+    prepared = df.copy()
+    if "TotalCharges" in prepared.columns:
+        # No CSV Kaggle, clientes sem tenure podem vir com TotalCharges em branco.
+        prepared["TotalCharges"] = pd.to_numeric(
+            prepared["TotalCharges"].replace(r"^\s*$", np.nan, regex=True),
+            errors="coerce",
+        )
+    return prepared
 
 
 def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -118,6 +131,7 @@ def generate_sample_dataset(rows: int = 1000, seed: int = RANDOM_SEED) -> pd.Dat
 
     return pd.DataFrame(
         {
+            "customerID": [f"SYNTH-{index:05d}" for index in range(rows)],
             "gender": rng.choice(["Female", "Male"], rows),
             "SeniorCitizen": senior,
             "Partner": rng.choice(["Yes", "No"], rows),
