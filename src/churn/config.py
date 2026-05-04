@@ -6,6 +6,7 @@ TARGET_COLUMN = "Churn"
 TARGET_ALIASES = ["Churn", "Churn?"]
 ID_COLUMNS = ["customerID", "Phone"]
 
+# Permite rodar instalado como pacote, Docker ou diretamente na raiz do projeto.
 PROJECT_ROOT = Path(os.getenv("CHURN_PROJECT_ROOT", Path.cwd())).resolve()
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"

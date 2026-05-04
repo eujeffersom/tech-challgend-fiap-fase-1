@@ -17,6 +17,7 @@ def download_churn_dataset(
     dataset: str = DEFAULT_DATASET,
     output: str | Path = DEFAULT_OUTPUT,
 ) -> Path:
+    # KaggleHub baixa para cache local; depois copiamos para data/raw/churn.csv.
     dataset_path = Path(kagglehub.dataset_download(dataset))
     source_file = dataset_path / SOURCE_FILENAME
     if not source_file.exists():

@@ -40,6 +40,7 @@ def _train_single_model(
 ) -> tuple[ChurnMLP, dict[str, float]]:
     model = ChurnMLP(input_dim=x_train.shape[1], hidden_dim=hidden_dim, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # pos_weight penaliza mais erros na classe churn, que costuma ser minoritaria.
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, dtype=torch.float32))
     train_x, train_y = _to_tensor(x_train, y_train)
     valid_x = _to_tensor(x_valid)
@@ -56,6 +57,7 @@ def _train_single_model(
     with torch.no_grad():
         valid_prob = torch.sigmoid(model(valid_x)).numpy()
     if threshold is None:
+        # Nos folds de validacao, escolhemos o melhor threshold por F1.
         selected_threshold, metrics = find_best_threshold(y_valid, valid_prob)
         metrics["threshold"] = selected_threshold
     else:
@@ -65,6 +67,7 @@ def _train_single_model(
 
 
 def _calculate_pos_weight(y_train: np.ndarray) -> float:
+    # Razao negativos/positivos usada pelo BCEWithLogitsLoss.
     positives = float(np.sum(y_train == 1))
     negatives = float(np.sum(y_train == 0))
     if positives == 0:
@@ -83,6 +86,7 @@ def train_mlp(
     set_global_seed(RANDOM_SEED)
     df = load_churn_csv(data_path)
     x, y = split_features_target(df)
+    # Separacao final: 80% treino e 20% teste, preservando a proporcao do alvo.
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.2, stratify=y, random_state=RANDOM_SEED
     )
@@ -107,6 +111,7 @@ def train_mlp(
 
     with mlflow.start_run(run_name="pytorch_mlp"):
         mlflow.log_params(params)
+        # A validacao cruzada estima metricas e thresholds usando apenas o treino.
         cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
         fold_metrics: list[dict[str, float]] = []
         cv_splits = cv.split(x_train_transformed, y_train_array)

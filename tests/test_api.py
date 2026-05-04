@@ -12,6 +12,7 @@ def test_health_endpoint() -> None:
 
 def test_predict_returns_503_when_model_is_missing() -> None:
     client = TestClient(app)
+    # O teste aceita 422 quando o artefato treinado espera outro schema de entrada.
     payload = {
         "customer": {
             "gender": "Female",

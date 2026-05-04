@@ -36,6 +36,7 @@ def train_baseline(data_path: str | Path) -> dict[str, float]:
     set_global_seed(RANDOM_SEED)
     df = load_churn_csv(data_path)
     x, y = split_features_target(df)
+    # Mantem a proporcao de churn nas bases de treino e teste.
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.2, stratify=y, random_state=RANDOM_SEED
     )
@@ -46,6 +47,7 @@ def train_baseline(data_path: str | Path) -> dict[str, float]:
     scoring = ["accuracy", "precision", "recall", "f1", "roc_auc"]
 
     with mlflow.start_run(run_name="baseline_logistic_regression"):
+        # A validacao cruzada roda somente dentro dos 80% de treino.
         cv_results = cross_validate(pipeline, x_train, y_train, cv=cv, scoring=scoring)
         for metric_name in scoring:
             value = float(np.mean(cv_results[f"test_{metric_name}"]))

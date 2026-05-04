@@ -26,6 +26,7 @@ class PredictionResponse(BaseModel):
 
 
 def _load_artifacts() -> tuple[object, ChurnMLP, float]:
+    # A API depende dos artefatos gerados pelo treino da MLP.
     if not PREPROCESSOR_PATH.exists() or not MLP_MODEL_PATH.exists():
         raise FileNotFoundError(
             "Artefatos nao encontrados. Execute o treino antes de iniciar a API."
@@ -54,6 +55,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         preprocessor, model, threshold = _load_artifacts()
         row = pd.DataFrame([request.customer])
         validate_feature_frame(row)
+        # Garante que a entrada siga a mesma ordem de colunas usada no treino.
         expected_columns = list(getattr(preprocessor, "feature_names_in_", []))
         missing = set(expected_columns) - set(row.columns)
         if missing:

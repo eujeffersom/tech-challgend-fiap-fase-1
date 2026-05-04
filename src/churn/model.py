@@ -6,6 +6,7 @@ from torch import nn
 
 
 def set_global_seed(seed: int) -> None:
+    # Reduz variacao entre execucoes de treino.
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -15,6 +16,7 @@ def set_global_seed(seed: int) -> None:
 class ChurnMLP(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int = 64, dropout: float = 0.2) -> None:
         super().__init__()
+        # MLP simples para dados tabulares ja pre-processados.
         self.network = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),

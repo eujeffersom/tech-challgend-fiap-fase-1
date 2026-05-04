@@ -5,6 +5,7 @@ import structlog
 
 
 def configure_logging() -> None:
+    # Logs em JSON facilitam leitura local e coleta em producao.
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,

@@ -6,6 +6,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
 def infer_column_types(df: pd.DataFrame) -> tuple[list[str], list[str]]:
+    # Define pre-processamento dinamico para aceitar datasets Telco e sinteticos.
     numeric_columns = df.select_dtypes(include=["number", "bool"]).columns.tolist()
     categorical_columns = [column for column in df.columns if column not in numeric_columns]
     return categorical_columns, numeric_columns

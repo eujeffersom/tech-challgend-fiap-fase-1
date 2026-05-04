@@ -20,6 +20,7 @@ from sklearn.pipeline import Pipeline
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
+    # Permite executar o script sem instalar o pacote em modo notebook.
     sys.path.insert(0, str(SRC_DIR))
 
 from churn.config import RANDOM_SEED  # noqa: E402
@@ -60,6 +61,7 @@ def plot_target_distribution(df: pd.DataFrame) -> None:
 
 
 def evaluate_baselines(x: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
+    # Usa o mesmo split 80/20 e validacao estratificada do pipeline principal.
     x_train, x_test, y_train, y_test = train_test_split(
         x,
         y,

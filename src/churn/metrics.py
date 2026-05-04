@@ -19,6 +19,7 @@ def find_best_threshold(
     y_prob,
     thresholds: np.ndarray | None = None,
 ) -> tuple[float, dict[str, float]]:
+    # Busca um corte que privilegie F1, mais util que accuracy em churn desbalanceado.
     candidates = thresholds if thresholds is not None else np.arange(0.1, 0.91, 0.05)
     best_threshold = 0.5
     best_metrics = binary_classification_metrics(y_true, y_prob, threshold=best_threshold)

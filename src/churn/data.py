@@ -21,6 +21,7 @@ def load_churn_csv(path: str | Path) -> pd.DataFrame:
 
 def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     normalized = df.copy()
+    # Aceita datasets que nomeiam o alvo como Churn ou Churn?.
     target_column = next(
         (column for column in TARGET_ALIASES if column in normalized.columns),
         None,
@@ -33,6 +34,7 @@ def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     feature_columns = infer_feature_columns(normalized)
     for column in feature_columns:
+        # Converte colunas numericas lidas como texto, como TotalCharges.
         if normalized[column].dtype == "object":
             converted = pd.to_numeric(normalized[column], errors="coerce")
             if converted.notna().mean() >= 0.95:
@@ -57,6 +59,7 @@ def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def infer_feature_columns(df: pd.DataFrame) -> list[str]:
+    # Remove alvo e identificadores que nao devem entrar no modelo.
     ignored = set(ID_COLUMNS + [TARGET_COLUMN])
     return [column for column in df.columns if column not in ignored]
 
