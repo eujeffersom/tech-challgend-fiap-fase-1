@@ -18,6 +18,7 @@ mlflow.db
 models/*.pt
 models/*.joblib
 models/*.pkl
+notebooks/figures/
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep
