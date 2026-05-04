@@ -14,6 +14,7 @@ build/
 
 # ML artifacts
 mlruns/
+mlflow.db
 models/*.pt
 models/*.joblib
 models/*.pkl
