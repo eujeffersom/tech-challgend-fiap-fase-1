@@ -81,11 +81,27 @@ uv --version
 
 ### 2. Preparar o Banco de Dados
 
+O arquivo original utilizado neste projeto e o dataset `churn.csv` disponivel em:
+
+```text
+https://github.com/albayraktaroglu/Datasets/blob/master/churn.csv
+```
+
+Para baixar diretamente o CSV correto pela linha de comando, use a URL raw:
+
+```bash
+mkdir -p data/raw
+curl -L https://raw.githubusercontent.com/albayraktaroglu/Datasets/master/churn.csv \
+  -o data/raw/churn.csv
+```
+
 O dataset principal deve ficar em:
 
 ```text
 data/raw/churn.csv
 ```
+
+O nome e o caminho acima sao importantes porque os comandos de treino usam esse arquivo por padrao.
 
 A coluna alvo esperada pode ser:
 
