@@ -13,19 +13,23 @@ datasets grandes.
 Fonte:
 
 ```text
-https://github.com/albayraktaroglu/Datasets/blob/master/churn.csv
-```
-
-Download direto:
-
-```bash
-mkdir -p data/raw
-curl -L https://raw.githubusercontent.com/albayraktaroglu/Datasets/master/churn.csv \
-  -o data/raw/churn.csv
+Source: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
+Arquivo original no site: WA_Fn-UseC_-Telco-Customer-Churn.csv
+Arquivo recebido/anexado: Churn1.csv
+Nome esperado no projeto: churn.csv
 ```
 
 O arquivo deve ser salvo exatamente em:
 
 ```text
 data/raw/churn.csv
+```
+
+Se o arquivo baixado/anexado estiver como `Churn1.csv`, renomeie ou copie para `data/raw/churn.csv`.
+
+Exemplo no macOS:
+
+```bash
+mkdir -p data/raw
+cp ~/Downloads/Churn1.csv data/raw/churn.csv
 ```

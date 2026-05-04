@@ -56,14 +56,14 @@ Para Linux / macOS:
 
 ```bash
 source .venv/bin/activate
-uv sync --all-groups
+uv sync --all-groups --no-editable
 ```
 
 Para Windows PowerShell:
 
 ```powershell
 .venv\Scripts\Activate.ps1
-uv sync --all-groups
+uv sync --all-groups --no-editable
 ```
 
 Nota para Windows: se receber erro de execucao de scripts desabilitada ao ativar o ambiente, rode:
@@ -81,33 +81,35 @@ uv --version
 
 ### 2. Baixar o Banco de Dados
 
-O arquivo original utilizado neste projeto e o dataset `churn.csv`, disponivel no repositorio:
+O dataset utilizado neste projeto e o **Telco Customer Churn**, obtido no Kaggle/KaggleHub.
 
 ```text
-https://github.com/albayraktaroglu/Datasets/blob/master/churn.csv
+Source: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
+Arquivo original no site: WA_Fn-UseC_-Telco-Customer-Churn.csv
+Arquivo recebido/anexado: Churn1.csv
+Nome esperado no projeto: data/raw/churn.csv
 ```
 
-O script a seguir baixa o arquivo via GitHub Raw e copia para a pasta local esperada pelo projeto:
-
-```bash
-mkdir -p data/raw
-curl -L https://raw.githubusercontent.com/albayraktaroglu/Datasets/master/churn.csv \
-  -o data/raw/churn.csv
-```
-
-No nosso projeto, o dataset deve estar salvo exatamente em:
+Baixe o CSV pela fonte acima e salve o arquivo no projeto com o nome `churn.csv`, dentro da pasta:
 
 ```text
 data/raw/churn.csv
 ```
 
+Se o arquivo baixado/anexado estiver como `Churn1.csv`, renomeie ou copie para `data/raw/churn.csv`.
 Esse caminho e importante porque os comandos de treinamento usam `data/raw/churn.csv` por padrao.
+
+Exemplo no macOS, caso o arquivo esteja em `Downloads`:
+
+```bash
+mkdir -p data/raw
+cp ~/Downloads/Churn1.csv data/raw/churn.csv
+```
 
 A coluna alvo esperada pode ser:
 
 ```text
 Churn
-Churn?
 ```
 
 Valores aceitos para o alvo:
@@ -122,7 +124,7 @@ No
 Para validar o pipeline sem dataset externo, gere uma base sintetica:
 
 ```bash
-uv run --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 1000
+uv run --no-editable --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 1000
 ```
 
 ### 3. Execucao do Treinamento
@@ -130,13 +132,13 @@ uv run --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 
 Treine o baseline com Scikit-Learn:
 
 ```bash
-uv run --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
+uv run --no-editable --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
 ```
 
 Treine a rede neural MLP com PyTorch:
 
 ```bash
-uv run --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
+uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
 ```
 
 Artefatos gerados localmente:
@@ -152,7 +154,7 @@ models/preprocessor.joblib
 Para iniciar o servidor FastAPI:
 
 ```bash
-uv run --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
+uv run --no-editable --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
 ```
 
 Acesse o portal Swagger / Docs em:
@@ -180,9 +182,9 @@ curl -X POST http://127.0.0.1:8000/predict \
 Garantindo que o codigo nao perca formato e validando regras de negocio:
 
 ```bash
-uv run --python 3.14.4 pytest
-uv run --python 3.14.4 ruff check .
-uv run --python 3.14.4 ruff format --check .
+uv run --no-editable --python 3.14.4 pytest
+uv run --no-editable --python 3.14.4 ruff check .
+uv run --no-editable --python 3.14.4 ruff format --check .
 ```
 
 Testes implementados:
@@ -227,13 +229,12 @@ make docker-run
 uv python install 3.14.4
 uv venv --python 3.14.4
 source .venv/bin/activate
-uv sync --all-groups
-uv run --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 1000
-uv run --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
-uv run --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
-uv run --python 3.14.4 pytest
-uv run --python 3.14.4 ruff check .
-uv run --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
+uv sync --all-groups --no-editable
+uv run --no-editable --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
+uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
+uv run --no-editable --python 3.14.4 pytest
+uv run --no-editable --python 3.14.4 ruff check .
+uv run --no-editable --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
 ```
 
 ## Tracking no MLflow
@@ -241,7 +242,7 @@ uv run --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir
 Para visualizar as experimentacoes e comparar o baseline Scikit-Learn com a MLP PyTorch, rode:
 
 ```bash
-uv run --python 3.14.4 mlflow ui
+uv run --no-editable --python 3.14.4 mlflow ui
 ```
 
 Com Make:
@@ -285,7 +286,7 @@ Execute:
 ```bash
 python --version
 uv --version
-uv run --python 3.14.4 pytest
-uv run --python 3.14.4 ruff check .
+uv run --no-editable --python 3.14.4 pytest
+uv run --no-editable --python 3.14.4 ruff check .
 git status
 ```

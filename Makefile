@@ -7,31 +7,31 @@ IMAGE_NAME := telco-churn-api
 setup:
 	uv python install $(PYTHON_VERSION)
 	uv venv --python $(PYTHON_VERSION)
-	uv sync --all-groups
+	uv sync --all-groups --no-editable
 
 sample:
-	uv run --python $(PYTHON_VERSION) churn-generate-sample --output $(DATA_PATH) --rows 1000
+	uv run --no-editable --python $(PYTHON_VERSION) churn-generate-sample --output $(DATA_PATH) --rows 1000
 
 train-baseline:
-	uv run --python $(PYTHON_VERSION) churn-train-baseline --data $(DATA_PATH)
+	uv run --no-editable --python $(PYTHON_VERSION) churn-train-baseline --data $(DATA_PATH)
 
 train-mlp:
-	uv run --python $(PYTHON_VERSION) churn-train-mlp --data $(DATA_PATH) --epochs 40
+	uv run --no-editable --python $(PYTHON_VERSION) churn-train-mlp --data $(DATA_PATH) --epochs 40
 
 test:
-	uv run --python $(PYTHON_VERSION) pytest
+	uv run --no-editable --python $(PYTHON_VERSION) pytest
 
 lint:
-	uv run --python $(PYTHON_VERSION) ruff check .
+	uv run --no-editable --python $(PYTHON_VERSION) ruff check .
 
 format:
-	uv run --python $(PYTHON_VERSION) ruff format .
+	uv run --no-editable --python $(PYTHON_VERSION) ruff format .
 
 run:
-	uv run --python $(PYTHON_VERSION) uvicorn --app-dir src churn.api:app --reload --reload-dir src
+	uv run --no-editable --python $(PYTHON_VERSION) uvicorn --app-dir src churn.api:app --reload --reload-dir src
 
 mlflow:
-	uv run --python $(PYTHON_VERSION) mlflow ui
+	uv run --no-editable --python $(PYTHON_VERSION) mlflow ui
 
 docker-build:
 	docker build -t $(IMAGE_NAME) .
