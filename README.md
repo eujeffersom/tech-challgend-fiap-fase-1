@@ -136,7 +136,7 @@ models/preprocessor.joblib
 Para iniciar o servidor FastAPI:
 
 ```bash
-uv run --python 3.14.4 uvicorn churn.api:app --reload
+uv run --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
 ```
 
 Acesse o portal Swagger / Docs em:
@@ -187,7 +187,7 @@ uv run --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
 uv run --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
 uv run --python 3.14.4 pytest
 uv run --python 3.14.4 ruff check .
-uv run --python 3.14.4 uvicorn churn.api:app --reload
+uv run --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
 ```
 
 ## Tracking no MLflow
