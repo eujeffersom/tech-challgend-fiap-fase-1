@@ -1,10 +1,12 @@
+import time
 from typing import Any
 
 import joblib
 import pandas as pd
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from churn.config import MLP_MODEL_PATH, PREPROCESSOR_PATH
 from churn.features import validate_feature_frame
@@ -13,6 +15,25 @@ from churn.model import ChurnMLP
 
 logger = get_logger(__name__)
 app = FastAPI(title="Churn Prediction API", version="0.1.0")
+
+
+class LatencyLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        response.headers["X-Process-Time-ms"] = f"{duration_ms:.2f}"
+        logger.info(
+            "request_completed",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=round(duration_ms, 2),
+        )
+        return response
+
+
+app.add_middleware(LatencyLoggingMiddleware)
 
 
 class PredictionRequest(BaseModel):

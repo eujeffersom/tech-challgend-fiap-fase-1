@@ -3,9 +3,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pandera.errors import SchemaErrors
 
 from churn.config import ID_COLUMNS, RANDOM_SEED, TARGET_ALIASES, TARGET_COLUMN
 from churn.logging_config import get_logger
+from churn.schema import validate_raw_churn_schema
 
 logger = get_logger(__name__)
 
@@ -16,6 +18,11 @@ def load_churn_csv(path: str | Path) -> pd.DataFrame:
         raise FileNotFoundError(f"Dataset nao encontrado: {csv_path}")
 
     df = pd.read_csv(csv_path)
+    try:
+        validate_raw_churn_schema(df)
+    except SchemaErrors as exc:
+        logger.info("raw_schema_validation_failed", failures=str(exc.failure_cases.head()))
+        raise
     return normalize_churn_dataframe(df)
 
 

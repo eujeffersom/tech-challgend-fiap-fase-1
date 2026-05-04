@@ -8,6 +8,7 @@ def test_health_endpoint() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert "X-Process-Time-ms" in response.headers
 
 
 def test_predict_returns_503_when_model_is_missing() -> None:

@@ -223,7 +223,7 @@ uv run --no-editable --python 3.14.4 ruff format --check .
 Testes implementados:
 
 - Smoke test
-- Schema validation
+- Schema validation com Pandera
 - API test
 
 ### 6. Rodando com Docker (Deploy)
@@ -313,6 +313,8 @@ Metricas rastreadas:
 - Tracking de parametros, metricas e artefatos no MLflow.
 - API FastAPI para inferencia.
 - Logging estruturado com `structlog`.
+- Middleware de latencia na API com header `X-Process-Time-ms`.
+- Validacao de schema do dataset com Pandera.
 - Testes automatizados com Pytest.
 - Linting com Ruff.
 - Model Card documentando limitacoes e vieses.

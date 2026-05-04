@@ -22,6 +22,9 @@ Entrada esperada:
 - Atributos numericos: tempo de contrato, cobranca mensal, cobranca total e indicador senior.
 - Alvo: `Churn`, com valores `Yes` ou `No`.
 
+O dataset bruto e validado com Pandera antes do treino, garantindo colunas esperadas, tipos basicos
+e regras como `tenure >= 0`, `MonthlyCharges >= 0` e alvo em `Yes`/`No`.
+
 ## Metricas
 
 As metricas rastreadas no MLflow incluem:
