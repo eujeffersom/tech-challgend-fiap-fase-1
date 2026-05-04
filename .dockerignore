@@ -11,3 +11,5 @@ data/processed/*
 mlruns/
 mlflow.db
 anotacoes
+README 2.md
+docs/final_validation_report.md
