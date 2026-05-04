@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any
 
 import joblib
 import pandas as pd
@@ -15,30 +15,8 @@ logger = get_logger(__name__)
 app = FastAPI(title="Churn Prediction API", version="0.1.0")
 
 
-class CustomerPayload(BaseModel):
-    gender: Literal["Female", "Male"]
-    SeniorCitizen: int = Field(ge=0, le=1)
-    Partner: str
-    Dependents: str
-    tenure: int = Field(ge=0)
-    PhoneService: str
-    MultipleLines: str
-    InternetService: str
-    OnlineSecurity: str
-    OnlineBackup: str
-    DeviceProtection: str
-    TechSupport: str
-    StreamingTV: str
-    StreamingMovies: str
-    Contract: str
-    PaperlessBilling: str
-    PaymentMethod: str
-    MonthlyCharges: float = Field(ge=0)
-    TotalCharges: float = Field(ge=0)
-
-
 class PredictionRequest(BaseModel):
-    customer: CustomerPayload
+    customer: dict[str, Any] = Field(min_length=1)
 
 
 class PredictionResponse(BaseModel):
@@ -74,8 +52,16 @@ def health() -> dict[str, str]:
 def predict(request: PredictionRequest) -> PredictionResponse:
     try:
         preprocessor, model, threshold = _load_artifacts()
-        row = pd.DataFrame([request.customer.model_dump()])
+        row = pd.DataFrame([request.customer])
         validate_feature_frame(row)
+        expected_columns = list(getattr(preprocessor, "feature_names_in_", []))
+        missing = set(expected_columns) - set(row.columns)
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Colunas ausentes no payload: {sorted(missing)}",
+            )
+        row = row[expected_columns]
         features = preprocessor.transform(row)
         with torch.no_grad():
             input_tensor = torch.tensor(features, dtype=torch.float32)

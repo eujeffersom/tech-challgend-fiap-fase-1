@@ -2,6 +2,8 @@ from pathlib import Path
 
 RANDOM_SEED = 42
 TARGET_COLUMN = "Churn"
+TARGET_ALIASES = ["Churn", "Churn?"]
+ID_COLUMNS = ["customerID", "Phone"]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"

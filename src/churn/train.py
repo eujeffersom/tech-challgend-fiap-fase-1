@@ -72,7 +72,7 @@ def train_mlp(
         x, y, test_size=0.2, stratify=y, random_state=RANDOM_SEED
     )
 
-    preprocessor = build_preprocessor()
+    preprocessor = build_preprocessor(x_train)
     x_train_transformed = preprocessor.fit_transform(x_train)
     x_test_transformed = preprocessor.transform(x_test)
     y_train_array = y_train.to_numpy()

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from churn.config import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS, RANDOM_SEED, TARGET_COLUMN
+from churn.config import ID_COLUMNS, RANDOM_SEED, TARGET_ALIASES, TARGET_COLUMN
 from churn.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -21,23 +21,48 @@ def load_churn_csv(path: str | Path) -> pd.DataFrame:
 
 def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     normalized = df.copy()
-    missing = set(CATEGORICAL_COLUMNS + NUMERIC_COLUMNS + [TARGET_COLUMN]) - set(normalized.columns)
-    if missing:
-        raise ValueError(f"Colunas obrigatorias ausentes: {sorted(missing)}")
+    target_column = next(
+        (column for column in TARGET_ALIASES if column in normalized.columns),
+        None,
+    )
+    if target_column is None:
+        raise ValueError(f"Coluna alvo ausente. Use uma destas colunas: {TARGET_ALIASES}")
 
-    normalized["TotalCharges"] = pd.to_numeric(normalized["TotalCharges"], errors="coerce")
-    for column in NUMERIC_COLUMNS:
-        normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+    if target_column != TARGET_COLUMN:
+        normalized = normalized.rename(columns={target_column: TARGET_COLUMN})
 
-    normalized = normalized.dropna(subset=NUMERIC_COLUMNS + [TARGET_COLUMN])
-    normalized[TARGET_COLUMN] = normalized[TARGET_COLUMN].map({"Yes": 1, "No": 0, 1: 1, 0: 0})
+    feature_columns = infer_feature_columns(normalized)
+    for column in feature_columns:
+        if normalized[column].dtype == "object":
+            converted = pd.to_numeric(normalized[column], errors="coerce")
+            if converted.notna().mean() >= 0.95:
+                normalized[column] = converted
+
+    normalized[TARGET_COLUMN] = normalized[TARGET_COLUMN].astype(str).str.strip()
+    normalized[TARGET_COLUMN] = normalized[TARGET_COLUMN].map(
+        {
+            "Yes": 1,
+            "No": 0,
+            "True": 1,
+            "False": 0,
+            "True.": 1,
+            "False.": 0,
+            "1": 1,
+            "0": 0,
+        }
+    )
     normalized = normalized.dropna(subset=[TARGET_COLUMN])
     normalized[TARGET_COLUMN] = normalized[TARGET_COLUMN].astype(int)
     return normalized
 
 
+def infer_feature_columns(df: pd.DataFrame) -> list[str]:
+    ignored = set(ID_COLUMNS + [TARGET_COLUMN])
+    return [column for column in df.columns if column not in ignored]
+
+
 def split_features_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    return df[CATEGORICAL_COLUMNS + NUMERIC_COLUMNS], df[TARGET_COLUMN]
+    return df[infer_feature_columns(df)], df[TARGET_COLUMN]
 
 
 def generate_sample_dataset(rows: int = 1000, seed: int = RANDOM_SEED) -> pd.DataFrame:

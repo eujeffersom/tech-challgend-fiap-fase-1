@@ -84,10 +84,11 @@ O dataset principal deve ficar em:
 data/raw/churn.csv
 ```
 
-A coluna alvo esperada e:
+A coluna alvo esperada pode ser:
 
 ```text
 Churn
+Churn?
 ```
 
 Valores aceitos para o alvo:

@@ -19,17 +19,15 @@ logger = get_logger(__name__)
 
 
 def build_baseline_pipeline() -> Pipeline:
+    classifier = LogisticRegression(
+        max_iter=2000,
+        class_weight="balanced",
+        random_state=RANDOM_SEED,
+    )
     return Pipeline(
         steps=[
-            ("preprocessor", build_preprocessor()),
-            (
-                "classifier",
-                LogisticRegression(
-                    max_iter=2000,
-                    class_weight="balanced",
-                    random_state=RANDOM_SEED,
-                ),
-            ),
+            ("preprocessor", "passthrough"),
+            ("classifier", classifier),
         ]
     )
 
@@ -43,6 +41,7 @@ def train_baseline(data_path: str | Path) -> dict[str, float]:
     )
 
     pipeline = build_baseline_pipeline()
+    pipeline.set_params(preprocessor=build_preprocessor(x_train))
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
     scoring = ["accuracy", "precision", "recall", "f1", "roc_auc"]
 
