@@ -1,127 +1,84 @@
-# Tech Challenge FIAP - Fase 1
+# Tech Challenge Fase 01: Previsao de Churn de Telecom
 
-Rede neural para previsao de churn com pipeline profissional end-to-end.
+Este e o repositorio principal do Tech Challenge da Fase 01, focado em construir uma pipeline de
+ML de ponta a ponta para previsao do cancelamento de clientes (churn), seguindo boas praticas de
+engenharia de Machine Learning e MLOps.
 
-Este projeto atende ao tema central da Fase 1: criar, treinar, comparar, rastrear e servir um
-modelo preditivo de churn para uma operadora de telecomunicacoes. O modelo principal e uma rede
-neural MLP em PyTorch, comparada com baseline em Scikit-Learn, com experimentos rastreados no
-MLflow e inferencia exposta via FastAPI.
+O modelo principal da entrega e uma rede neural MLP treinada com PyTorch, comparada com baseline em
+Scikit-Learn, rastreada com MLflow e servida em tempo real por uma API FastAPI.
 
-## Tecnologias Utilizadas
+## Arquitetura do Projeto
 
-- Python 3.14.4
-- uv
-- PyTorch
-- Scikit-Learn
-- MLflow
-- FastAPI
-- Pytest
-- Ruff
-- Structlog
+A arquitetura foi escolhida para permitir inferencia em tempo real atraves de uma REST API. O
+pipeline contempla ingestao e validacao dos dados, pre-processamento com Scikit-Learn, treinamento
+de baseline, treinamento da MLP em PyTorch, rastreamento de experimentos com MLflow e exposicao do
+modelo via FastAPI.
 
-## Estrutura do Projeto
+Consulte a documentacao complementar:
 
-```text
-.
-|-- data/
-|   |-- raw/
-|   `-- processed/
-|-- docs/
-|   `-- model_card.md
-|-- models/
-|-- notebooks/
-|-- src/
-|   `-- churn/
-|       |-- api.py
-|       |-- baseline.py
-|       |-- config.py
-|       |-- data.py
-|       |-- features.py
-|       |-- logging_config.py
-|       |-- metrics.py
-|       |-- model.py
-|       `-- train.py
-|-- tests/
-|   |-- test_api.py
-|   |-- test_schema.py
-|   `-- test_smoke.py
-|-- pyproject.toml
-|-- uv.lock
-`-- README.md
-```
+- [Arquitetura de Deploy e Monitoramento](docs/deploy_architecture.md)
+- [Model Card (Performance e Vieses)](docs/model_card.md)
+- [ML Canvas](docs/ml_canvas.md)
 
-## Pre-Requisitos
+## Estrutura do Repositorio
 
-Instale as ferramentas abaixo antes de executar o projeto:
+- `data/`: datasets brutos e processados. Os dados reais sao ignorados pelo Git.
+- `models/`: artefatos locais, incluindo preprocessor, baseline e pesos da rede neural PyTorch.
+- `notebooks/`: espaco para analise exploratoria e experimentos manuais.
+- `src/`: core modular do projeto, com API, treinamento, features, modelos e metricas.
+- `tests/`: bateria de testes com Pytest, incluindo smoke test, schema test e teste da API.
+- `docs/`: arquivos complementares de MLOps, arquitetura, model card e ML Canvas.
+- `pyproject.toml`: fonte unica de dependencias, configuracao de linting e pytest.
 
-```bash
-python --version
-uv --version
-git --version
-```
+## Como Levantar o Projeto Localmente
 
-O projeto foi configurado para Python 3.14.4:
+### 1. Setup do Ambiente
+
+Este projeto usa `pyproject.toml` como Single Source of Truth para as dependencias. O pre-requisito
+do projeto e Python 3.14.4.
+
+Instale a versao correta do Python:
 
 ```bash
 uv python install 3.14.4
 ```
 
-## Configuracao Inicial do Ambiente
-
-Crie o ambiente virtual com a versao correta do Python:
+Crie o ambiente virtual:
 
 ```bash
 uv venv --python 3.14.4
 ```
 
-Ative o ambiente no macOS/Linux:
+Para Linux / macOS:
 
 ```bash
 source .venv/bin/activate
-```
-
-Ative o ambiente no Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Instale as dependencias do projeto:
-
-```bash
 uv sync --all-groups
 ```
 
-## Configuracao Inicial do Git
+Para Windows PowerShell:
 
-Caso ainda nao tenha configurado seu usuario Git:
+```powershell
+.venv\Scripts\Activate.ps1
+uv sync --all-groups
+```
+
+Nota para Windows: se receber erro de execucao de scripts desabilitada ao ativar o ambiente, rode:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Verifique a instalacao:
 
 ```bash
-git config --global user.name "Jeffersom Goncalves"
-git config --global user.email "eujeffersom@gmail.com"
+python --version
+uv --version
 ```
 
-Verifique as configuracoes:
+### 2. Preparar o Banco de Dados
 
-```bash
-git config --list
-```
-
-Repositorio remoto:
-
-```bash
-git remote -v
-```
-
-URL do projeto:
-
-```text
-git@github.com:eujeffersom/tech-challgend-fiap-fase-1.git
-```
-
-## Dados
-
-O dataset principal deve ser salvo em:
+O dataset principal deve ficar em:
 
 ```text
 data/raw/churn.csv
@@ -142,77 +99,43 @@ No
 0
 ```
 
-Caso nao tenha um dataset real, gere uma base sintetica para validar o pipeline:
+Para validar o pipeline sem dataset externo, gere uma base sintetica:
 
 ```bash
 uv run --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 1000
 ```
 
-## Treinamento dos Modelos
+### 3. Execucao do Treinamento
 
-### Baseline com Scikit-Learn
-
-O baseline usa regressao logistica com pipeline de pre-processamento e validacao cruzada
-estratificada.
+Treine o baseline com Scikit-Learn:
 
 ```bash
 uv run --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
 ```
 
-Artefato gerado:
-
-```text
-models/baseline_logreg.joblib
-```
-
-### Rede Neural MLP com PyTorch
-
-O modelo principal e uma MLP treinada com PyTorch.
+Treine a rede neural MLP com PyTorch:
 
 ```bash
 uv run --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
 ```
 
-Artefatos gerados:
+Artefatos gerados localmente:
 
 ```text
+models/baseline_logreg.joblib
 models/churn_mlp.pt
 models/preprocessor.joblib
 ```
 
-## MLflow
+### 4. Rodando a API de Inferencia
 
-Os experimentos registram parametros, metricas e artefatos.
-
-Metricas rastreadas:
-
-- Accuracy
-- Precision
-- Recall
-- F1
-- ROC-AUC
-
-Abra a interface do MLflow:
-
-```bash
-uv run --python 3.14.4 mlflow ui
-```
-
-Depois acesse:
-
-```text
-http://127.0.0.1:5000
-```
-
-## API de Inferencia
-
-Inicie a API:
+Para iniciar o servidor FastAPI:
 
 ```bash
 uv run --python 3.14.4 uvicorn churn.api:app --reload
 ```
 
-Documentacao interativa:
+Acesse o portal Swagger / Docs em:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -224,7 +147,7 @@ Health check:
 curl http://127.0.0.1:8000/health
 ```
 
-Predicao:
+Exemplo de predicao:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
@@ -232,95 +155,23 @@ curl -X POST http://127.0.0.1:8000/predict \
   -d '{"customer":{"gender":"Female","SeniorCitizen":0,"Partner":"Yes","Dependents":"No","tenure":12,"PhoneService":"Yes","MultipleLines":"No","InternetService":"Fiber optic","OnlineSecurity":"No","OnlineBackup":"Yes","DeviceProtection":"No","TechSupport":"No","StreamingTV":"Yes","StreamingMovies":"Yes","Contract":"Month-to-month","PaperlessBilling":"Yes","PaymentMethod":"Electronic check","MonthlyCharges":79.5,"TotalCharges":950.0}}'
 ```
 
-## Testes Automatizados
+### 5. Checagem de Qualidade
 
-Execute todos os testes:
+Garantindo que o codigo nao perca formato e validando regras de negocio:
 
 ```bash
 uv run --python 3.14.4 pytest
+uv run --python 3.14.4 ruff check .
+uv run --python 3.14.4 ruff format --check .
 ```
 
 Testes implementados:
 
 - Smoke test
-- Schema test
+- Schema validation
 - API test
 
-## Linting e Formatacao
-
-Verifique o lint:
-
-```bash
-uv run --python 3.14.4 ruff check .
-```
-
-Verifique a formatacao:
-
-```bash
-uv run --python 3.14.4 ruff format --check .
-```
-
-Aplicar formatacao automaticamente:
-
-```bash
-uv run --python 3.14.4 ruff format .
-```
-
-## Model Card
-
-A documentacao do modelo esta em:
-
-```text
-docs/model_card.md
-```
-
-O arquivo descreve:
-
-- Uso pretendido
-- Dados de entrada
-- Metricas
-- Limitacoes
-- Vieses e riscos
-- Mitigacoes recomendadas
-
-## DVC Opcional
-
-Para versionar dados grandes, instale o DVC:
-
-```bash
-pip3 install dvc
-```
-
-Ou no macOS com Homebrew:
-
-```bash
-brew install dvc
-```
-
-Inicialize o DVC:
-
-```bash
-dvc init
-```
-
-Adicione um dataset:
-
-```bash
-dvc add data/raw/churn.csv
-git add data/raw/churn.csv.dvc data/raw/.gitignore
-git commit -m "data: track churn dataset with dvc"
-```
-
-Configure um remote local de exemplo:
-
-```bash
-dvc remote add -d localstore /tmp/dvcstore
-dvc push
-```
-
-## Execucao Completa do Projeto
-
-Fluxo recomendado do zero:
+### 6. Fluxo Completo do Zero
 
 ```bash
 uv python install 3.14.4
@@ -335,22 +186,40 @@ uv run --python 3.14.4 ruff check .
 uv run --python 3.14.4 uvicorn churn.api:app --reload
 ```
 
-## Checklist dos Requisitos
+## Tracking no MLflow
 
-- Estrutura organizada com `src/`, `data/`, `models/`, `tests/`, `notebooks/`, `docs/`
-- `README.md` com setup, execucao e descricao do projeto
-- `pyproject.toml` como fonte unica de dependencias, linting e pytest
-- `.gitignore` adequado para projetos de ML
-- PyTorch para MLP
-- Scikit-Learn para baseline e pre-processamento
-- MLflow para tracking
-- FastAPI para inferencia
-- Seeds fixados
-- Validacao cruzada estratificada
-- Model Card
-- Testes automatizados
-- Logging estruturado
-- Ruff sem erros
+Para visualizar as experimentacoes e comparar o baseline Scikit-Learn com a MLP PyTorch, rode:
+
+```bash
+uv run --python 3.14.4 mlflow ui
+```
+
+Acesse:
+
+```text
+http://127.0.0.1:5000
+```
+
+Metricas rastreadas:
+
+- Accuracy
+- Precision
+- Recall
+- F1
+- ROC-AUC
+
+## Boas Praticas Implementadas
+
+- Seeds fixados para reprodutibilidade.
+- Validacao cruzada estratificada.
+- Pipelines de pre-processamento com Scikit-Learn.
+- Baseline para comparacao com a MLP.
+- Tracking de parametros, metricas e artefatos no MLflow.
+- API FastAPI para inferencia.
+- Logging estruturado com `structlog`.
+- Testes automatizados com Pytest.
+- Linting com Ruff.
+- Model Card documentando limitacoes e vieses.
 
 ## Verificacao Final
 
