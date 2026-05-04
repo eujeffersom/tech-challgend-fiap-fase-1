@@ -11,7 +11,7 @@ from churn.config import MLP_MODEL_PATH, PREPROCESSOR_PATH, RANDOM_SEED
 from churn.data import load_churn_csv, split_features_target
 from churn.features import build_preprocessor
 from churn.logging_config import get_logger
-from churn.metrics import binary_classification_metrics
+from churn.metrics import binary_classification_metrics, find_best_threshold
 from churn.model import ChurnMLP, set_global_seed
 
 logger = get_logger(__name__)
@@ -35,10 +35,12 @@ def _train_single_model(
     lr: float,
     hidden_dim: int,
     dropout: float,
+    pos_weight: float,
+    threshold: float | None = None,
 ) -> tuple[ChurnMLP, dict[str, float]]:
     model = ChurnMLP(input_dim=x_train.shape[1], hidden_dim=hidden_dim, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    loss_fn = torch.nn.BCEWithLogitsLoss()
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, dtype=torch.float32))
     train_x, train_y = _to_tensor(x_train, y_train)
     valid_x = _to_tensor(x_valid)
 
@@ -53,8 +55,21 @@ def _train_single_model(
     model.eval()
     with torch.no_grad():
         valid_prob = torch.sigmoid(model(valid_x)).numpy()
-    metrics = binary_classification_metrics(y_valid, valid_prob)
+    if threshold is None:
+        selected_threshold, metrics = find_best_threshold(y_valid, valid_prob)
+        metrics["threshold"] = selected_threshold
+    else:
+        metrics = binary_classification_metrics(y_valid, valid_prob, threshold=threshold)
+        metrics["threshold"] = threshold
     return model, metrics
+
+
+def _calculate_pos_weight(y_train: np.ndarray) -> float:
+    positives = float(np.sum(y_train == 1))
+    negatives = float(np.sum(y_train == 0))
+    if positives == 0:
+        return 1.0
+    return negatives / positives
 
 
 def train_mlp(
@@ -77,6 +92,7 @@ def train_mlp(
     x_test_transformed = preprocessor.transform(x_test)
     y_train_array = y_train.to_numpy()
     y_test_array = y_test.to_numpy()
+    pos_weight = _calculate_pos_weight(y_train_array)
 
     params = {
         "model_type": "pytorch_mlp",
@@ -86,6 +102,7 @@ def train_mlp(
         "dropout": dropout,
         "cv_folds": 5,
         "seed": RANDOM_SEED,
+        "pos_weight": pos_weight,
     }
 
     with mlflow.start_run(run_name="pytorch_mlp"):
@@ -103,9 +120,15 @@ def train_mlp(
                 lr=lr,
                 hidden_dim=hidden_dim,
                 dropout=dropout,
+                pos_weight=_calculate_pos_weight(y_train_array[train_idx]),
             )
             fold_metrics.append(metrics)
             mlflow.log_metrics({f"cv_fold_{fold}_{key}": value for key, value in metrics.items()})
+
+        selected_threshold = float(
+            np.mean([fold_result["threshold"] for fold_result in fold_metrics])
+        )
+        mlflow.log_metric("selected_threshold", selected_threshold)
 
         for metric_name in fold_metrics[0]:
             mlflow.log_metric(
@@ -122,6 +145,8 @@ def train_mlp(
             lr=lr,
             hidden_dim=hidden_dim,
             dropout=dropout,
+            pos_weight=pos_weight,
+            threshold=selected_threshold,
         )
         mlflow.log_metrics({f"test_{key}": value for key, value in test_metrics.items()})
 
@@ -132,7 +157,7 @@ def train_mlp(
                 "input_dim": x_train_transformed.shape[1],
                 "hidden_dim": hidden_dim,
                 "dropout": dropout,
-                "threshold": 0.5,
+                "threshold": selected_threshold,
             },
             MLP_MODEL_PATH,
         )

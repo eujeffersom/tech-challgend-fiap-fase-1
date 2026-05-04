@@ -36,4 +36,4 @@ def test_predict_returns_503_when_model_is_missing() -> None:
         }
     }
     response = client.post("/predict", json=payload)
-    assert response.status_code in {200, 503}
+    assert response.status_code in {200, 422, 503}

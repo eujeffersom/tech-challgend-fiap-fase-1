@@ -7,6 +7,9 @@ engenharia de Machine Learning e MLOps.
 O modelo principal da entrega e uma rede neural MLP treinada com PyTorch, comparada com baseline em
 Scikit-Learn, rastreada com MLflow e servida em tempo real por uma API FastAPI.
 
+A MLP calcula `pos_weight` automaticamente para lidar com desbalanceamento da classe churn e
+seleciona um threshold de classificacao com base no melhor F1 observado na validacao cruzada.
+
 ## Arquitetura do Projeto
 
 A arquitetura foi escolhida para permitir inferencia em tempo real atraves de uma REST API. O
@@ -213,6 +216,7 @@ Metricas rastreadas:
 
 - Seeds fixados para reprodutibilidade.
 - Validacao cruzada estratificada.
+- Tratamento de desbalanceamento com `pos_weight`.
 - Pipelines de pre-processamento com Scikit-Learn.
 - Baseline para comparacao com a MLP.
 - Tracking de parametros, metricas e artefatos no MLflow.

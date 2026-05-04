@@ -35,12 +35,16 @@ As metricas rastreadas no MLflow incluem:
 Para churn, `recall` e `ROC-AUC` tendem a ser mais importantes que accuracy, pois a classe de
 cancelamento pode ser minoritaria.
 
+O modelo MLP usa `pos_weight` no `BCEWithLogitsLoss` para reduzir o efeito do desbalanceamento de
+classes. O threshold de classificacao tambem e selecionado durante a validacao cruzada buscando
+melhor F1, em vez de assumir sempre `0.5`.
+
 ## Limitacoes
 
 - O modelo depende da qualidade e atualidade dos dados historicos.
 - Mudancas em precos, campanhas ou atendimento podem causar drift.
 - Dados sinteticos servem apenas para validacao tecnica do pipeline, nao para avaliacao real.
-- O threshold padrao `0.5` pode nao otimizar custo de retencao.
+- O threshold selecionado por F1 pode nao otimizar diretamente o custo financeiro de retencao.
 
 ## Vieses e Riscos
 
