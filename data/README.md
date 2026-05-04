@@ -15,8 +15,7 @@ Fonte:
 ```text
 Source: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
 Arquivo original no site: WA_Fn-UseC_-Telco-Customer-Churn.csv
-Arquivo recebido/anexado: Churn1.csv
-Nome esperado no projeto: churn.csv
+Renomear para: data/raw/churn.csv
 ```
 
 O arquivo deve ser salvo exatamente em:
@@ -25,11 +24,18 @@ O arquivo deve ser salvo exatamente em:
 data/raw/churn.csv
 ```
 
-Se o arquivo baixado/anexado estiver como `Churn1.csv`, renomeie ou copie para `data/raw/churn.csv`.
+Se o arquivo baixado estiver como `WA_Fn-UseC_-Telco-Customer-Churn.csv`, renomeie ou copie para
+`data/raw/churn.csv`.
 
 Exemplo no macOS:
 
 ```bash
 mkdir -p data/raw
-cp ~/Downloads/Churn1.csv data/raw/churn.csv
+cp ~/Downloads/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/churn.csv
+```
+
+Opcionalmente, use o comando do projeto para baixar via KaggleHub:
+
+```bash
+uv run --no-editable --python 3.14.4 churn-download-data --output data/raw/churn.csv
 ```

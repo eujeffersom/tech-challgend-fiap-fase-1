@@ -86,8 +86,7 @@ O dataset utilizado neste projeto e o **Telco Customer Churn**, obtido no Kaggle
 ```text
 Source: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
 Arquivo original no site: WA_Fn-UseC_-Telco-Customer-Churn.csv
-Arquivo recebido/anexado: Churn1.csv
-Nome esperado no projeto: data/raw/churn.csv
+Renomear para: data/raw/churn.csv
 ```
 
 Baixe o CSV pela fonte acima e salve o arquivo no projeto com o nome `churn.csv`, dentro da pasta:
@@ -96,14 +95,30 @@ Baixe o CSV pela fonte acima e salve o arquivo no projeto com o nome `churn.csv`
 data/raw/churn.csv
 ```
 
-Se o arquivo baixado/anexado estiver como `Churn1.csv`, renomeie ou copie para `data/raw/churn.csv`.
+Se o arquivo baixado estiver como `WA_Fn-UseC_-Telco-Customer-Churn.csv`, renomeie ou copie para
+`data/raw/churn.csv`.
 Esse caminho e importante porque os comandos de treinamento usam `data/raw/churn.csv` por padrao.
 
 Exemplo no macOS, caso o arquivo esteja em `Downloads`:
 
 ```bash
 mkdir -p data/raw
-cp ~/Downloads/Churn1.csv data/raw/churn.csv
+cp ~/Downloads/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/churn.csv
+```
+
+Opcionalmente, tambem e possivel baixar pelo KaggleHub e salvar no nome correto:
+
+```python
+import kagglehub
+
+path = kagglehub.dataset_download("blastchar/telco-customer-churn")
+print("Path to dataset files:", path)
+```
+
+Ou usar o comando do projeto:
+
+```bash
+uv run --no-editable --python 3.14.4 churn-download-data --output data/raw/churn.csv
 ```
 
 A coluna alvo esperada pode ser:
