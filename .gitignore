@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Packaging
+dist/
+build/
+*.egg-info/
+
+# ML artifacts
+mlruns/
+models/*.pt
+models/*.joblib
+models/*.pkl
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/README.md
+
+# Local env
+.env
+.DS_Store
