@@ -6,12 +6,13 @@ import mlflow
 import numpy as np
 import torch
 from sklearn.model_selection import StratifiedKFold, train_test_split
+from torch.utils.data import DataLoader, TensorDataset
 
 from churn.config import MLP_MODEL_PATH, PREPROCESSOR_PATH, RANDOM_SEED
 from churn.data import load_churn_csv, split_features_target
 from churn.features import build_preprocessor
 from churn.logging_config import get_logger
-from churn.metrics import binary_classification_metrics, find_best_threshold
+from churn.metrics import binary_classification_metrics, cost_tradeoff_metrics, find_best_threshold
 from churn.model import ChurnMLP, set_global_seed
 
 logger = get_logger(__name__)
@@ -36,6 +37,8 @@ def _train_single_model(
     hidden_dim: int,
     dropout: float,
     pos_weight: float,
+    batch_size: int,
+    patience: int,
     threshold: float | None = None,
 ) -> tuple[ChurnMLP, dict[str, float]]:
     model = ChurnMLP(input_dim=x_train.shape[1], hidden_dim=hidden_dim, dropout=dropout)
@@ -44,14 +47,44 @@ def _train_single_model(
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight, dtype=torch.float32))
     train_x, train_y = _to_tensor(x_train, y_train)
     valid_x = _to_tensor(x_valid)
+    valid_y = torch.tensor(y_valid, dtype=torch.float32)
+    train_loader = DataLoader(
+        TensorDataset(train_x, train_y),
+        batch_size=batch_size,
+        shuffle=True,
+    )
+    best_state = {key: value.detach().clone() for key, value in model.state_dict().items()}
+    best_valid_loss = float("inf")
+    epochs_without_improvement = 0
 
-    for _ in range(epochs):
+    for epoch in range(epochs):
         model.train()
-        optimizer.zero_grad()
-        logits = model(train_x)
-        loss = loss_fn(logits, train_y)
-        loss.backward()
-        optimizer.step()
+        for batch_x, batch_y in train_loader:
+            optimizer.zero_grad()
+            logits = model(batch_x)
+            loss = loss_fn(logits, batch_y)
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+        with torch.no_grad():
+            valid_loss = float(loss_fn(model(valid_x), valid_y).item())
+        if valid_loss < best_valid_loss:
+            best_valid_loss = valid_loss
+            epochs_without_improvement = 0
+            best_state = {key: value.detach().clone() for key, value in model.state_dict().items()}
+        else:
+            epochs_without_improvement += 1
+
+        if epochs_without_improvement >= patience:
+            logger.info(
+                "early_stopping_triggered",
+                epoch=epoch + 1,
+                best_valid_loss=best_valid_loss,
+            )
+            break
+
+    model.load_state_dict(best_state)
 
     model.eval()
     with torch.no_grad():
@@ -63,6 +96,7 @@ def _train_single_model(
     else:
         metrics = binary_classification_metrics(y_valid, valid_prob, threshold=threshold)
         metrics["threshold"] = threshold
+    metrics["best_valid_loss"] = best_valid_loss
     return model, metrics
 
 
@@ -82,6 +116,8 @@ def train_mlp(
     lr: float = 0.001,
     hidden_dim: int = 64,
     dropout: float = 0.2,
+    batch_size: int = 128,
+    patience: int = 8,
 ) -> dict[str, float]:
     set_global_seed(RANDOM_SEED)
     df = load_churn_csv(data_path)
@@ -104,6 +140,8 @@ def train_mlp(
         "learning_rate": lr,
         "hidden_dim": hidden_dim,
         "dropout": dropout,
+        "batch_size": batch_size,
+        "patience": patience,
         "cv_folds": 5,
         "seed": RANDOM_SEED,
         "pos_weight": pos_weight,
@@ -126,6 +164,8 @@ def train_mlp(
                 hidden_dim=hidden_dim,
                 dropout=dropout,
                 pos_weight=_calculate_pos_weight(y_train_array[train_idx]),
+                batch_size=batch_size,
+                patience=patience,
             )
             fold_metrics.append(metrics)
             mlflow.log_metrics({f"cv_fold_{fold}_{key}": value for key, value in metrics.items()})
@@ -151,9 +191,19 @@ def train_mlp(
             hidden_dim=hidden_dim,
             dropout=dropout,
             pos_weight=pos_weight,
+            batch_size=batch_size,
+            patience=patience,
+            threshold=selected_threshold,
+        )
+        with torch.no_grad():
+            test_prob = torch.sigmoid(model(_to_tensor(x_test_transformed))).numpy()
+        test_cost_metrics = cost_tradeoff_metrics(
+            y_test_array,
+            test_prob,
             threshold=selected_threshold,
         )
         mlflow.log_metrics({f"test_{key}": value for key, value in test_metrics.items()})
+        mlflow.log_metrics({f"cost_{key}": value for key, value in test_cost_metrics.items()})
 
         MLP_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
@@ -163,6 +213,8 @@ def train_mlp(
                 "hidden_dim": hidden_dim,
                 "dropout": dropout,
                 "threshold": selected_threshold,
+                "batch_size": batch_size,
+                "patience": patience,
             },
             MLP_MODEL_PATH,
         )
@@ -170,8 +222,9 @@ def train_mlp(
         mlflow.log_artifact(str(MLP_MODEL_PATH))
         mlflow.log_artifact(str(PREPROCESSOR_PATH))
 
-    logger.info("mlp_trained", model_path=str(MLP_MODEL_PATH), **test_metrics)
-    return test_metrics
+    output_metrics = test_metrics | test_cost_metrics
+    logger.info("mlp_trained", model_path=str(MLP_MODEL_PATH), **output_metrics)
+    return output_metrics
 
 
 def main() -> None:
@@ -181,6 +234,8 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--hidden-dim", type=int, default=64)
     parser.add_argument("--dropout", type=float, default=0.2)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--patience", type=int, default=8)
     args = parser.parse_args()
     train_mlp(
         args.data,
@@ -188,4 +243,6 @@ def main() -> None:
         lr=args.lr,
         hidden_dim=args.hidden_dim,
         dropout=args.dropout,
+        batch_size=args.batch_size,
+        patience=args.patience,
     )

@@ -19,6 +19,9 @@ models/*.pt
 models/*.joblib
 models/*.pkl
 notebooks/figures/
+!docs/reports/
+!docs/reports/*.md
+!docs/reports/*.csv
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep

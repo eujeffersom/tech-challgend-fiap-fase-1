@@ -156,12 +156,30 @@ Treine a rede neural MLP com PyTorch:
 uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
 ```
 
+Comparar MLP, modelo linear e arvores/ensembles com metricas e custo:
+
+```bash
+uv run --no-editable --python 3.14.4 churn-compare-models --data data/raw/churn.csv --epochs 40
+```
+
+Com Make:
+
+```bash
+make train-baseline
+make train-mlp
+make compare-models
+```
+
 Artefatos gerados localmente:
 
 ```text
 models/baseline_logreg.joblib
 models/churn_mlp.pt
 models/preprocessor.joblib
+models/random_forest.joblib
+models/gradient_boosting.joblib
+docs/reports/model_comparison.csv
+docs/reports/model_comparison.md
 ```
 
 ### 4. Rodando a API de Inferencia
@@ -247,6 +265,7 @@ source .venv/bin/activate
 uv sync --all-groups --no-editable
 uv run --no-editable --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
 uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
+uv run --no-editable --python 3.14.4 churn-compare-models --data data/raw/churn.csv --epochs 40
 uv run --no-editable --python 3.14.4 pytest
 uv run --no-editable --python 3.14.4 ruff check .
 uv run --no-editable --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
@@ -279,14 +298,18 @@ Metricas rastreadas:
 - Recall
 - F1
 - ROC-AUC
+- PR-AUC
+- Custo de falso positivo e falso negativo
 
 ## Boas Praticas Implementadas
 
 - Seeds fixados para reprodutibilidade.
 - Validacao cruzada estratificada.
 - Tratamento de desbalanceamento com `pos_weight`.
+- MLP com batching e early stopping.
 - Pipelines de pre-processamento com Scikit-Learn.
-- Baseline para comparacao com a MLP.
+- Baselines lineares, arvores e ensembles para comparacao com a MLP.
+- Analise de trade-off de custo entre falso positivo e falso negativo.
 - Tracking de parametros, metricas e artefatos no MLflow.
 - API FastAPI para inferencia.
 - Logging estruturado com `structlog`.

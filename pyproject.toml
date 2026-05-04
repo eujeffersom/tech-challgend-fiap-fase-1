@@ -28,6 +28,7 @@ dev = [
 [project.scripts]
 churn-download-data = "churn.download_data:main"
 churn-generate-sample = "churn.data:main_generate_sample"
+churn-compare-models = "churn.compare_models:main"
 churn-train-baseline = "churn.baseline:main"
 churn-train-mlp = "churn.train:main"
 

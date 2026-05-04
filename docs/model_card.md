@@ -31,6 +31,8 @@ As metricas rastreadas no MLflow incluem:
 - Recall
 - F1
 - ROC-AUC
+- PR-AUC
+- Metricas de custo: falsos positivos, falsos negativos e valor liquido de churn evitado
 
 Para churn, `recall` e `ROC-AUC` tendem a ser mais importantes que accuracy, pois a classe de
 cancelamento pode ser minoritaria.
@@ -38,6 +40,10 @@ cancelamento pode ser minoritaria.
 O modelo MLP usa `pos_weight` no `BCEWithLogitsLoss` para reduzir o efeito do desbalanceamento de
 classes. O threshold de classificacao tambem e selecionado durante a validacao cruzada buscando
 melhor F1, em vez de assumir sempre `0.5`.
+
+O projeto tambem gera uma tabela comparativa entre regressao logistica, Random Forest, Gradient
+Boosting e MLP PyTorch em `docs/reports/model_comparison.csv` e
+`docs/reports/model_comparison.md`.
 
 ## Limitacoes
 

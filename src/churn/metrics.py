@@ -1,5 +1,13 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 
 def binary_classification_metrics(y_true, y_prob, threshold: float = 0.5) -> dict[str, float]:
@@ -11,6 +19,7 @@ def binary_classification_metrics(y_true, y_prob, threshold: float = 0.5) -> dic
         "recall": float(recall_score(y_true, predictions, zero_division=0)),
         "f1": float(f1_score(y_true, predictions, zero_division=0)),
         "roc_auc": float(roc_auc_score(y_true, probabilities)),
+        "pr_auc": float(average_precision_score(y_true, probabilities)),
     }
 
 
@@ -31,3 +40,30 @@ def find_best_threshold(
             best_metrics = metrics
 
     return best_threshold, best_metrics
+
+
+def cost_tradeoff_metrics(
+    y_true,
+    y_prob,
+    *,
+    threshold: float,
+    customer_value: float = 1000.0,
+    retention_success_rate: float = 0.30,
+    action_cost: float = 50.0,
+) -> dict[str, float]:
+    probabilities = np.asarray(y_prob)
+    predictions = (probabilities >= threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_true, predictions, labels=[0, 1]).ravel()
+    avoided_churn_value = tp * customer_value * retention_success_rate
+    action_total_cost = (tp + fp) * action_cost
+    missed_churn_cost = fn * customer_value * retention_success_rate
+    return {
+        "true_negatives": float(tn),
+        "false_positives": float(fp),
+        "false_negatives": float(fn),
+        "true_positives": float(tp),
+        "retention_action_cost": float(action_total_cost),
+        "missed_churn_cost": float(missed_churn_cost),
+        "avoided_churn_value": float(avoided_churn_value),
+        "net_avoided_churn_value": float(avoided_churn_value - action_total_cost),
+    }
