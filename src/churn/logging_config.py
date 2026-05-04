@@ -1,3 +1,5 @@
+"""Configuracao unica de logging estruturado para todo o pacote."""
+
 import logging
 import sys
 
@@ -24,5 +26,7 @@ def configure_logging() -> None:
 
 
 def get_logger(name: str):
+    """Retorna logger JSON ja configurado."""
+
     configure_logging()
     return structlog.get_logger(name)

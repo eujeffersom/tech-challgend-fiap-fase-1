@@ -1,3 +1,5 @@
+"""Compara MLP, modelo linear e ensembles usando metricas tecnicas e custo."""
+
 import argparse
 from pathlib import Path
 
@@ -24,6 +26,8 @@ COMPARISON_MD = REPORTS_DIR / "model_comparison.md"
 
 
 def _build_sklearn_models() -> dict[str, object]:
+    """Define os modelos Scikit-Learn usados na comparacao."""
+
     return {
         "logistic_regression": LogisticRegression(
             max_iter=2000,
@@ -49,6 +53,8 @@ def compare_models(
     retention_success_rate: float = 0.30,
     action_cost: float = 50.0,
 ) -> pd.DataFrame:
+    """Treina modelos comparativos e gera relatorios em CSV e Markdown."""
+
     df = load_churn_csv(data_path)
     x, y = split_features_target(df)
     x_train, x_test, y_train, y_test = train_test_split(
@@ -62,6 +68,7 @@ def compare_models(
     rows = []
     mlflow.set_experiment("churn_model_comparison")
     for model_name, estimator in _build_sklearn_models().items():
+        # Cada baseline usa o mesmo pre-processamento para comparacao justa.
         pipeline = Pipeline(
             steps=[
                 ("preprocessor", build_preprocessor(x_train)),
@@ -116,6 +123,8 @@ def compare_models(
 
 
 def _to_markdown_table(df: pd.DataFrame) -> str:
+    """Gera tabela Markdown sem depender de bibliotecas extras."""
+
     columns = list(df.columns)
     header = "| " + " | ".join(columns) + " |"
     separator = "| " + " | ".join(["---"] * len(columns)) + " |"
@@ -126,6 +135,8 @@ def _to_markdown_table(df: pd.DataFrame) -> str:
 
 
 def main() -> None:
+    """Entrada de linha de comando para gerar a comparacao completa."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/raw/churn.csv")
     parser.add_argument("--epochs", type=int, default=40)
@@ -140,4 +151,4 @@ def main() -> None:
         retention_success_rate=args.retention_success_rate,
         action_cost=args.action_cost,
     )
-    print(comparison.to_string(index=False))
+    logger.info("comparison_finished", rows=comparison.to_dict(orient="records"))

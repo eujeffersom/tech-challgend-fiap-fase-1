@@ -1,3 +1,5 @@
+"""Treina a baseline de Regressao Logistica com Scikit-Learn e MLflow."""
+
 import argparse
 from pathlib import Path
 
@@ -19,6 +21,8 @@ logger = get_logger(__name__)
 
 
 def build_baseline_pipeline() -> Pipeline:
+    """Monta o pipeline base usado para comparar com a MLP."""
+
     classifier = LogisticRegression(
         max_iter=2000,
         class_weight="balanced",
@@ -33,6 +37,8 @@ def build_baseline_pipeline() -> Pipeline:
 
 
 def train_baseline(data_path: str | Path) -> dict[str, float]:
+    """Treina, avalia e registra a baseline no MLflow."""
+
     set_global_seed(RANDOM_SEED)
     df = load_churn_csv(data_path)
     x, y = split_features_target(df)
@@ -68,6 +74,8 @@ def train_baseline(data_path: str | Path) -> dict[str, float]:
 
 
 def main() -> None:
+    """Entrada de linha de comando para treinar a baseline."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/raw/churn.csv")
     args = parser.parse_args()

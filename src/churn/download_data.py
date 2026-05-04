@@ -1,3 +1,5 @@
+"""Download opcional do dataset KaggleHub para o caminho padrao do projeto."""
+
 import argparse
 import shutil
 from pathlib import Path
@@ -17,6 +19,8 @@ def download_churn_dataset(
     dataset: str = DEFAULT_DATASET,
     output: str | Path = DEFAULT_OUTPUT,
 ) -> Path:
+    """Baixa o dataset publico e copia o CSV esperado para data/raw."""
+
     # KaggleHub baixa para cache local; depois copiamos para data/raw/churn.csv.
     dataset_path = Path(kagglehub.dataset_download(dataset))
     source_file = dataset_path / SOURCE_FILENAME
@@ -36,6 +40,8 @@ def download_churn_dataset(
 
 
 def main() -> None:
+    """Entrada de linha de comando para baixar o dataset."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))

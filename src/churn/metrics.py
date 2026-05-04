@@ -1,3 +1,5 @@
+"""Metricas tecnicas e de negocio usadas nos experimentos de churn."""
+
 import numpy as np
 from sklearn.metrics import (
     accuracy_score,
@@ -11,6 +13,8 @@ from sklearn.metrics import (
 
 
 def binary_classification_metrics(y_true, y_prob, threshold: float = 0.5) -> dict[str, float]:
+    """Calcula metricas principais de classificacao binaria."""
+
     probabilities = np.asarray(y_prob)
     predictions = (probabilities >= threshold).astype(int)
     return {
@@ -51,6 +55,8 @@ def cost_tradeoff_metrics(
     retention_success_rate: float = 0.30,
     action_cost: float = 50.0,
 ) -> dict[str, float]:
+    """Estima impacto financeiro simples de falsos positivos e negativos."""
+
     probabilities = np.asarray(y_prob)
     predictions = (probabilities >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, predictions, labels=[0, 1]).ravel()

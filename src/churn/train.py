@@ -1,3 +1,5 @@
+"""Treinamento da MLP PyTorch com CV estratificada, early stopping e MLflow."""
+
 import argparse
 from pathlib import Path
 
@@ -19,6 +21,8 @@ logger = get_logger(__name__)
 
 
 def _to_tensor(features: np.ndarray, target: np.ndarray | None = None):
+    """Converte arrays do preprocessor para tensores PyTorch."""
+
     x_tensor = torch.tensor(features, dtype=torch.float32)
     if target is None:
         return x_tensor
@@ -41,6 +45,8 @@ def _train_single_model(
     patience: int,
     threshold: float | None = None,
 ) -> tuple[ChurnMLP, dict[str, float]]:
+    """Treina uma MLP em um split e retorna metricas de validacao."""
+
     model = ChurnMLP(input_dim=x_train.shape[1], hidden_dim=hidden_dim, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # pos_weight penaliza mais erros na classe churn, que costuma ser minoritaria.
@@ -119,6 +125,8 @@ def train_mlp(
     batch_size: int = 128,
     patience: int = 8,
 ) -> dict[str, float]:
+    """Treina a MLP final, registra no MLflow e salva artefatos."""
+
     set_global_seed(RANDOM_SEED)
     df = load_churn_csv(data_path)
     x, y = split_features_target(df)
@@ -228,6 +236,8 @@ def train_mlp(
 
 
 def main() -> None:
+    """Entrada de linha de comando para treinar a MLP."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", default="data/raw/churn.csv")
     parser.add_argument("--epochs", type=int, default=40)

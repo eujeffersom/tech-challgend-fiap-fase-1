@@ -1,3 +1,5 @@
+"""Modelo MLP em PyTorch e utilitario de reprodutibilidade."""
+
 import random
 
 import numpy as np
@@ -14,6 +16,8 @@ def set_global_seed(seed: int) -> None:
 
 
 class ChurnMLP(nn.Module):
+    """Rede neural simples para classificacao tabular de churn."""
+
     def __init__(self, input_dim: int, hidden_dim: int = 64, dropout: float = 0.2) -> None:
         super().__init__()
         # MLP simples para dados tabulares ja pre-processados.

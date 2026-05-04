@@ -1,3 +1,5 @@
+"""Leitura, validacao e preparacao basica dos dados de churn."""
+
 import argparse
 from pathlib import Path
 
@@ -13,6 +15,8 @@ logger = get_logger(__name__)
 
 
 def load_churn_csv(path: str | Path) -> pd.DataFrame:
+    """Carrega o CSV bruto, valida o schema e normaliza o alvo."""
+
     csv_path = Path(path)
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset nao encontrado: {csv_path}")
@@ -27,6 +31,8 @@ def load_churn_csv(path: str | Path) -> pd.DataFrame:
 
 
 def normalize_churn_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Padroniza coluna alvo e converte numericos lidos como texto."""
+
     normalized = df.copy()
     # Aceita datasets que nomeiam o alvo como Churn ou Churn?.
     target_column = next(
@@ -72,10 +78,14 @@ def infer_feature_columns(df: pd.DataFrame) -> list[str]:
 
 
 def split_features_target(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+    """Separa features e coluna alvo para treino."""
+
     return df[infer_feature_columns(df)], df[TARGET_COLUMN]
 
 
 def generate_sample_dataset(rows: int = 1000, seed: int = RANDOM_SEED) -> pd.DataFrame:
+    """Cria uma base sintetica pequena para validar o pipeline localmente."""
+
     rng = np.random.default_rng(seed)
     tenure = rng.integers(1, 73, size=rows)
     contract = rng.choice(["Month-to-month", "One year", "Two year"], rows, p=[0.55, 0.25, 0.20])

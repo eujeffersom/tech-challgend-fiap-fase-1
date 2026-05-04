@@ -1,3 +1,5 @@
+"""API FastAPI para servir predicoes de churn em tempo real."""
+
 import time
 from typing import Any
 
@@ -18,6 +20,8 @@ app = FastAPI(title="Churn Prediction API", version="0.1.0")
 
 
 class LatencyLoggingMiddleware(BaseHTTPMiddleware):
+    """Registra latencia de cada requisicao em log estruturado."""
+
     async def dispatch(self, request: Request, call_next):
         start_time = time.perf_counter()
         response = await call_next(request)
@@ -37,10 +41,14 @@ app.add_middleware(LatencyLoggingMiddleware)
 
 
 class PredictionRequest(BaseModel):
+    """Payload esperado pelo endpoint de predicao."""
+
     customer: dict[str, Any] = Field(min_length=1)
 
 
 class PredictionResponse(BaseModel):
+    """Resposta padronizada com probabilidade, classe e threshold."""
+
     churn_probability: float
     churn_prediction: int
     threshold: float
@@ -67,11 +75,15 @@ def _load_artifacts() -> tuple[object, ChurnMLP, float]:
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    """Endpoint simples para health check de deploy."""
+
     return {"status": "ok"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
+    """Executa pre-processamento, inferencia da MLP e aplica o threshold."""
+
     try:
         preprocessor, model, threshold = _load_artifacts()
         row = pd.DataFrame([request.customer])

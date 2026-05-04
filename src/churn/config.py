@@ -1,3 +1,5 @@
+"""Configuracoes centrais de caminhos, colunas e seed do projeto."""
+
 import os
 from pathlib import Path
 

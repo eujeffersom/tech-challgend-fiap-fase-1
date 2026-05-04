@@ -1,3 +1,5 @@
+"""Pre-processamento de features com pipelines do Scikit-Learn."""
+
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -13,6 +15,8 @@ def infer_column_types(df: pd.DataFrame) -> tuple[list[str], list[str]]:
 
 
 def build_preprocessor(df: pd.DataFrame) -> ColumnTransformer:
+    """Cria transformador para imputar, escalar e aplicar one-hot encoding."""
+
     categorical_columns, numeric_columns = infer_column_types(df)
     numeric_pipeline = Pipeline(
         steps=[
@@ -35,5 +39,7 @@ def build_preprocessor(df: pd.DataFrame) -> ColumnTransformer:
 
 
 def validate_feature_frame(df: pd.DataFrame) -> None:
+    """Valida regras minimas para payloads de inferencia."""
+
     if df.empty:
         raise ValueError("Payload de entrada vazio.")
