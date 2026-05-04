@@ -31,3 +31,6 @@ data/processed/*
 # Local env
 .env
 .DS_Store
+
+# Local delivery notes
+docs/video_star_script.md
