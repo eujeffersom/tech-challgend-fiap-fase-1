@@ -1,343 +1,195 @@
 # Tech Challenge Fase 01: Previsao de Churn de Telecom
 
-Este e o repositorio principal do Tech Challenge da Fase 01, focado em construir uma pipeline de
-ML de ponta a ponta para previsao do cancelamento de clientes (churn), seguindo boas praticas de
-engenharia de Machine Learning e MLOps.
+Pipeline de Machine Learning de ponta a ponta para prever quais clientes de uma operadora de
+telecom tem risco de cancelar (churn): analise exploratoria, comparacao de modelos com
+Scikit-Learn, escolha de um modelo campeao e uma API FastAPI servindo esse modelo.
 
-O modelo principal da entrega e uma rede neural MLP treinada com PyTorch, comparada com baseline em
-Scikit-Learn, rastreada com MLflow e servida em tempo real por uma API FastAPI.
+O campeao atual e uma **Regressao Logistica**. Ela foi comparada com Random Forest, Gradient
+Boosting e uma rede neural `MLPClassifier`, todos com a mesma validacao cruzada estratificada
+de 5 folds. Uma MLP em PyTorch tambem entra na tabela como experimento extra. Os cinco modelos
+empataram tecnicamente (diferencas menores que o desvio da validacao cruzada), e no empate
+ficou o mais simples, mais leve e mais facil de explicar.
 
-A MLP calcula `pos_weight` automaticamente para lidar com desbalanceamento da classe churn e
-seleciona um threshold de classificacao com base no melhor F1 observado na validacao cruzada.
+| Modelo | ROC-AUC (CV) | F1 (CV) | Recall (CV) | F1 (teste) |
+| --- | ---: | ---: | ---: | ---: |
+| **Regressao Logistica (campeao)** | 0.8459 ± 0.0124 | 0.6406 ± 0.0216 | 0.7411 ± 0.0521 | 0.6186 |
+| Gradient Boosting | 0.8478 ± 0.0122 | 0.6374 ± 0.0166 | 0.7385 ± 0.0262 | 0.6257 |
+| Random Forest | 0.8415 ± 0.0081 | 0.6375 ± 0.0115 | 0.7472 ± 0.0631 | 0.6274 |
+| MLP PyTorch (extra) | 0.8458 ± 0.0126 | 0.6366 ± 0.0241 | 0.7739 ± 0.0321 | 0.6222 |
+| MLPClassifier | 0.8410 ± 0.0138 | 0.6331 ± 0.0235 | 0.7144 ± 0.0694 | 0.6195 |
 
-## Arquitetura do Projeto
+Tabela completa, com PR-AUC, threshold e impacto financeiro: `docs/reports/model_comparison.md`.
 
-A arquitetura foi escolhida para permitir inferencia em tempo real atraves de uma REST API. O
-pipeline contempla ingestao e validacao dos dados, pre-processamento com Scikit-Learn, treinamento
-de baseline, treinamento da MLP em PyTorch, rastreamento de experimentos com MLflow e exposicao do
-modelo via FastAPI.
+## Documentacao
 
-Consulte a documentacao complementar:
+- [Notebook de EDA e baselines](notebooks/01_eda_e_baselines.ipynb)
+- [ML Canvas](docs/ml_canvas.md): problema, stakeholders e metricas de negocio
+- [Model Card](docs/model_card.md): performance, limitacoes e vieses
+- [Arquitetura de deploy](docs/deploy_architecture.md)
+- [Plano de monitoramento](docs/monitoring_plan.md)
 
-- [Arquitetura de Deploy e Monitoramento](docs/deploy_architecture.md)
-- [Model Card (Performance e Vieses)](docs/model_card.md)
-- [Plano de Monitoramento](docs/monitoring_plan.md)
-- [ML Canvas](docs/ml_canvas.md)
-
-## Estrutura do Repositorio
-
-- `data/`: datasets brutos e processados. Os dados reais sao ignorados pelo Git.
-- `models/`: artefatos locais, incluindo preprocessor, baseline e pesos da rede neural PyTorch.
-- `notebooks/`: espaco para analise exploratoria e experimentos manuais.
-- `src/`: core modular do projeto, com API, treinamento, features, modelos e metricas.
-- `tests/`: bateria de testes com Pytest, incluindo smoke test, schema test e teste da API.
-- `docs/`: arquivos complementares de MLOps, arquitetura, model card e ML Canvas.
-- `pyproject.toml`: fonte unica de dependencias, configuracao de linting e pytest.
-
-## Como Levantar o Projeto Localmente
-
-### 1. Setup do Ambiente
-
-Este projeto usa `pyproject.toml` como Single Source of Truth para as dependencias. O pre-requisito
-do projeto e Python 3.14.4.
-
-Instale a versao correta do Python:
-
-```bash
-uv python install 3.14.4
-```
-
-Crie o ambiente virtual:
-
-```bash
-uv venv --python 3.14.4
-```
-
-Para Linux / macOS:
-
-```bash
-source .venv/bin/activate
-uv sync --all-groups --no-editable
-```
-
-Para Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-uv sync --all-groups --no-editable
-```
-
-Nota para Windows: se receber erro de execucao de scripts desabilitada ao ativar o ambiente, rode:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-Verifique a instalacao:
-
-```bash
-python --version
-uv --version
-```
-
-### 2. Baixar o Banco de Dados
-
-O dataset utilizado neste projeto e o **Telco Customer Churn**, obtido no Kaggle/KaggleHub.
+## Estrutura do repositorio
 
 ```text
-Source: https://www.kaggle.com/datasets/blastchar/telco-customer-churn
-Arquivo original no site: WA_Fn-UseC_-Telco-Customer-Churn.csv
-Renomear para: data/raw/churn.csv
+src/churn/          codigo de producao
+  data.py           leitura e limpeza do CSV
+  schema.py         validacao do CSV bruto com Pandera
+  features.py       pre-processamento (ColumnTransformer)
+  metrics.py        metricas tecnicas e de custo
+  baseline.py       baseline de Regressao Logistica
+  compare_models.py comparacao dos modelos e escolha do campeao
+  train.py          MLP PyTorch (experimento extra)
+  api.py            API FastAPI
+  api_models.py     formato de entrada e saida da API
+tests/              testes com pytest
+notebooks/          EDA e baselines
+models/             champion.joblib (versionado) e demais artefatos locais
+data/               dataset (fora do Git)
+docs/               ML Canvas, Model Card, arquitetura, monitoramento e relatorios
 ```
 
-Baixe o CSV pela fonte acima e salve o arquivo no projeto com o nome `churn.csv`, dentro da pasta:
+## Pre-requisitos
 
-```text
-data/raw/churn.csv
+- [uv](https://docs.astral.sh/uv/) 0.13 ou mais novo
+- Python 3.14.4 (o `make setup` instala pelo uv)
+- Docker, opcional, para rodar a API em container
+- `make` (macOS e Linux ja tem; no Windows, rode os comandos `uv` mostrados no `Makefile`)
+
+## Como rodar
+
+### 1. Ambiente
+
+```bash
+make setup
 ```
 
-Se o arquivo baixado estiver como `WA_Fn-UseC_-Telco-Customer-Churn.csv`, renomeie ou copie para
-`data/raw/churn.csv`.
-Esse caminho e importante porque os comandos de treinamento usam `data/raw/churn.csv` por padrao.
+Instala o Python 3.14.4 e todas as dependencias travadas no `uv.lock`. As dependencias ficam
+separadas por funcao:
 
-Exemplo no macOS, caso o arquivo esteja em `Downloads`:
+| Grupo | Para que serve |
+| --- | --- |
+| principal | o que a API precisa (FastAPI, Scikit-Learn, pandas). E so isso que vai para o Docker |
+| `train` | treino e tracking (PyTorch, MLflow, Pandera, KaggleHub) |
+| `notebook` | executar o notebook de EDA |
+| `dev` | testes e lint |
+
+No dia a dia os quatro sao instalados juntos, entao nao precisa se preocupar com isso.
+
+> **macOS com a pasta no iCloud** (dentro de `Documents` ou `Desktop`): o iCloud pode tirar
+> arquivos do `.venv` do disco e deixar tudo muito lento. Para evitar, crie o ambiente fora da
+> sincronizacao:
+>
+> ```bash
+> uv venv --python 3.14.4 .venv.nosync && ln -s .venv.nosync .venv && make setup
+> ```
+
+### 2. Dados
+
+O dataset e o [Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn).
+Baixe o CSV e salve como `data/raw/churn.csv`:
 
 ```bash
 mkdir -p data/raw
 cp ~/Downloads/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/churn.csv
 ```
 
-Opcionalmente, tambem e possivel baixar pelo KaggleHub e salvar no nome correto:
-
-```python
-import kagglehub
-
-path = kagglehub.dataset_download("blastchar/telco-customer-churn")
-print("Path to dataset files:", path)
-```
-
-Ou usar o comando do projeto:
+Ou baixe pelo KaggleHub:
 
 ```bash
-uv run --no-editable --python 3.14.4 churn-download-data --output data/raw/churn.csv
+uv run --no-editable churn-download-data --output data/raw/churn.csv
 ```
 
-A coluna alvo esperada pode ser:
+Para testar sem o dataset real, da para gerar uma base sintetica com `make sample`. Cuidado:
+ele grava em `data/raw/churn.csv` e sobrescreve o arquivo real se ele estiver la.
 
-```text
-Churn
-```
-
-Valores aceitos para o alvo:
-
-```text
-Yes
-No
-1
-0
-```
-
-Para validar o pipeline sem dataset externo, gere uma base sintetica:
+### 3. Treino e comparacao
 
 ```bash
-uv run --no-editable --python 3.14.4 churn-generate-sample --output data/raw/churn.csv --rows 1000
-```
-
-### 3. Execucao do Treinamento
-
-Treine o baseline com Scikit-Learn:
-
-```bash
-uv run --no-editable --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
-```
-
-Treine a rede neural MLP com PyTorch:
-
-```bash
-uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
-```
-
-Comparar MLP, modelo linear e arvores/ensembles com metricas e custo:
-
-```bash
-uv run --no-editable --python 3.14.4 churn-compare-models --data data/raw/churn.csv --epochs 40
-```
-
-Com Make:
-
-```bash
-make train-baseline
-make train-mlp
 make compare-models
 ```
 
-Artefatos gerados localmente:
+Treina os cinco modelos com a mesma validacao cruzada, escolhe o campeao (maior F1 medio na CV
+entre os modelos Scikit-Learn), salva em `models/champion.joblib` e atualiza
+`docs/reports/model_comparison.md`. Leva menos de um minuto.
 
-```text
-models/baseline_logreg.joblib
-models/churn_mlp.pt
-models/preprocessor.joblib
-models/random_forest.joblib
-models/gradient_boosting.joblib
-docs/reports/model_comparison.csv
-docs/reports/model_comparison.md
-```
-
-### 4. Rodando a API de Inferencia
-
-Para iniciar o servidor FastAPI:
+Outros comandos:
 
 ```bash
-uv run --no-editable --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
+make train-baseline   # so a Regressao Logistica de referencia
+make train-mlp        # so a MLP PyTorch
+make notebook         # reexecuta a EDA e salva o notebook com as saidas
+make mlflow           # abre o MLflow em http://127.0.0.1:5000
 ```
 
-Acesse o portal Swagger / Docs em:
+### 4. API
 
-```text
-http://127.0.0.1:8000/docs
+O `champion.joblib` ja vem no repositorio, entao a API sobe logo depois do `make setup`, sem
+precisar treinar nada:
+
+```bash
+make run
 ```
 
-Health check:
+Swagger em http://127.0.0.1:8000/docs, com um exemplo de cliente ja preenchido.
 
 ```bash
 curl http://127.0.0.1:8000/health
-```
 
-Exemplo de predicao:
-
-```bash
 curl -X POST http://127.0.0.1:8000/predict \
   -H "Content-Type: application/json" \
   -d '{"customer":{"gender":"Female","SeniorCitizen":0,"Partner":"Yes","Dependents":"No","tenure":12,"PhoneService":"Yes","MultipleLines":"No","InternetService":"Fiber optic","OnlineSecurity":"No","OnlineBackup":"Yes","DeviceProtection":"No","TechSupport":"No","StreamingTV":"Yes","StreamingMovies":"Yes","Contract":"Month-to-month","PaperlessBilling":"Yes","PaymentMethod":"Electronic check","MonthlyCharges":79.5,"TotalCharges":950.0}}'
 ```
 
-### 5. Checagem de Qualidade
+Resposta:
 
-Garantindo que o codigo nao perca formato e validando regras de negocio:
+```json
+{"churn_probability": 0.895, "churn_prediction": 1, "threshold": 0.58}
+```
+
+- `churn_probability`: probabilidade de cancelamento.
+- `churn_prediction`: 1 se a probabilidade passar do threshold.
+- `threshold`: corte escolhido na validacao cruzada (melhor F1), em vez do 0.5 padrao.
+
+O payload e validado campo a campo. Tipo errado, valor negativo ou categoria que nao existe no
+dataset (ex.: `"Contract": "XYZ"`) voltam **422** com a explicacao do erro. `TotalCharges` pode
+vir `null` para cliente recem-chegado, como acontece no dataset original.
+
+### 5. Qualidade
 
 ```bash
-uv run --no-editable --python 3.14.4 pytest
-uv run --no-editable --python 3.14.4 ruff check .
-uv run --no-editable --python 3.14.4 ruff format --check .
+make check
 ```
 
-Testes implementados:
+Roda `ruff check`, `ruff format --check` e os testes. Vale rodar antes de cada commit. Os testes
+cobrem:
 
-- Smoke test
-- Schema validation com Pandera
-- API test
+- contrato do `/predict` (campos e tipos da resposta) e do `/health`
+- respostas 422 para payload invalido e 503 sem modelo
+- validacao do schema do CSV e do `TotalCharges` vazio
+- comparacao de modelos: candidatos, validacao cruzada e regra do campeao
+- smoke test do pipeline de pre-processamento
 
-### 6. Rodando com Docker (Deploy)
-
-A API foi dockerizada para facilitar o deploy em producao. Com os artefatos de modelo gerados no
-passo 3, basta buildar e rodar o conteiner.
-
-Build da imagem:
-
-```bash
-docker build -t telco-churn-api .
-```
-
-Executar o conteiner mapeando a porta 8000:
-
-```bash
-docker run -p 8000:8000 telco-churn-api
-```
-
-Depois acesse:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Com Make:
+### 6. Docker
 
 ```bash
 make docker-build
 make docker-run
 ```
 
-### 7. Fluxo Completo do Zero
+A imagem tem dois estagios e leva so o necessario para servir o modelo: Python, as dependencias
+principais e o `champion.joblib`. PyTorch, MLflow, notebooks, testes e dados ficam de fora.
+Roda com usuario sem privilegios e tem healthcheck em `/health`.
 
-```bash
-uv python install 3.14.4
-uv venv --python 3.14.4
-source .venv/bin/activate
-uv sync --all-groups --no-editable
-uv run --no-editable --python 3.14.4 churn-train-baseline --data data/raw/churn.csv
-uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
-uv run --no-editable --python 3.14.4 churn-compare-models --data data/raw/churn.csv --epochs 40
-uv run --no-editable --python 3.14.4 pytest
-uv run --no-editable --python 3.14.4 ruff check .
-uv run --no-editable --python 3.14.4 uvicorn --app-dir src churn.api:app --reload --reload-dir src
-```
+## Boas praticas aplicadas
 
-## Tracking no MLflow
-
-Para visualizar as experimentacoes e comparar o baseline Scikit-Learn com a MLP PyTorch, rode:
-
-```bash
-uv run --no-editable --python 3.14.4 mlflow ui
-```
-
-Com Make:
-
-```bash
-make mlflow
-```
-
-Acesse:
-
-```text
-http://127.0.0.1:5000
-```
-
-Metricas rastreadas:
-
-- Accuracy
-- Precision
-- Recall
-- F1
-- ROC-AUC
-- PR-AUC
-- Custo de falso positivo e falso negativo
-
-## Boas Praticas Implementadas
-
-- Seeds fixados para reprodutibilidade.
-- Validacao cruzada estratificada.
-- Tratamento de desbalanceamento com `pos_weight`.
-- MLP com batching e early stopping.
-- Pipelines de pre-processamento com Scikit-Learn.
-- Baselines lineares, arvores e ensembles para comparacao com a MLP.
-- Analise de trade-off de custo entre falso positivo e falso negativo.
-- Tracking de parametros, metricas e artefatos no MLflow.
-- API FastAPI para inferencia.
-- Logging estruturado com `structlog`.
-- Middleware de latencia na API com header `X-Process-Time-ms`.
-- Validacao de schema do dataset com Pandera.
-- Testes automatizados com Pytest.
-- Linting com Ruff.
-- Model Card documentando limitacoes e vieses.
-- Plano de monitoramento com metricas, alertas e playbook de resposta.
-
-## Entrega Final
-
-A documentacao final consolida a decisao de arquitetura, os riscos do modelo e o plano operacional
-para colocar a solucao em producao:
-
-- Model Card completo: `docs/model_card.md`.
-- Arquitetura real-time vs. batch e justificativa: `docs/deploy_architecture.md`.
-- Plano de monitoramento: `docs/monitoring_plan.md`.
-
-## Verificacao Final
-
-Execute:
-
-```bash
-python --version
-uv --version
-uv run --no-editable --python 3.14.4 pytest
-uv run --no-editable --python 3.14.4 ruff check .
-git status
-```
+- Seed fixa (`RANDOM_SEED = 42`) em split, validacao cruzada e modelos.
+- Mesma validacao cruzada estratificada para todos os modelos, com threshold escolhido so com
+  dados de treino. O conjunto de teste e usado uma unica vez, no fim.
+- Pre-processamento dentro do `Pipeline`, ajustado so no treino de cada fold.
+- Separacao entre experimentacao (`notebooks/`) e codigo de producao (`src/churn/`).
+- Dependencias travadas no `uv.lock` e separadas por funcao.
+- Validacao do CSV bruto com Pandera e do payload da API com Pydantic.
+- Logs estruturados em JSON (`structlog`) e header `X-Process-Time-ms` com a latencia.
+- Experimentos registrados no MLflow, com hash do dataset.
+- Lint e formatacao com Ruff, testes com Pytest.
+- Model Card com limitacoes e vieses medidos por segmento.

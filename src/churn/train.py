@@ -189,6 +189,13 @@ def train_mlp(
                 float(np.mean([fold_result[metric_name] for fold_result in fold_metrics])),
             )
 
+        # Media e desvio dos folds, no mesmo formato da tabela de compare_models.
+        cv_summary = {}
+        for metric_name in ["roc_auc", "pr_auc", "f1", "recall", "precision"]:
+            values = [fold_result[metric_name] for fold_result in fold_metrics]
+            cv_summary[f"cv_{metric_name}_mean"] = float(np.mean(values))
+            cv_summary[f"cv_{metric_name}_std"] = float(np.std(values))
+
         model, test_metrics = _train_single_model(
             x_train_transformed,
             y_train_array,
@@ -230,7 +237,7 @@ def train_mlp(
         mlflow.log_artifact(str(MLP_MODEL_PATH))
         mlflow.log_artifact(str(PREPROCESSOR_PATH))
 
-    output_metrics = test_metrics | test_cost_metrics
+    output_metrics = test_metrics | test_cost_metrics | cv_summary
     logger.info("mlp_trained", model_path=str(MLP_MODEL_PATH), **output_metrics)
     return output_metrics
 

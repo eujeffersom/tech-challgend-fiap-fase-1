@@ -1,26 +1,29 @@
 """API FastAPI para servir predicoes de churn em tempo real."""
 
 import time
-from typing import Any
+from pathlib import Path
 
 import joblib
 import pandas as pd
-import torch
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
+from sklearn.pipeline import Pipeline
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from churn.config import MLP_MODEL_PATH, PREPROCESSOR_PATH
-from churn.features import validate_feature_frame
+from churn import __version__
+from churn.api_models import PredictionRequest, PredictionResponse
+from churn.config import CHAMPION_MODEL_PATH
 from churn.logging_config import get_logger
-from churn.model import ChurnMLP
 
 logger = get_logger(__name__)
-app = FastAPI(title="Churn Prediction API", version="0.1.0")
+app = FastAPI(title="Churn Prediction API", version=__version__)
+
+# Guarda o campeao em memoria. A chave inclui a data de modificacao do arquivo,
+# entao se o modelo for retreinado a API pega a versao nova sem precisar reiniciar.
+_champion_cache: dict[str, object] = {"key": None, "artifact": None}
 
 
 class LatencyLoggingMiddleware(BaseHTTPMiddleware):
-    """Registra latencia de cada requisicao em log estruturado."""
+    """Registra a latencia de cada requisicao no log."""
 
     async def dispatch(self, request: Request, call_next):
         start_time = time.perf_counter()
@@ -40,74 +43,57 @@ class LatencyLoggingMiddleware(BaseHTTPMiddleware):
 app.add_middleware(LatencyLoggingMiddleware)
 
 
-class PredictionRequest(BaseModel):
-    """Payload esperado pelo endpoint de predicao."""
-
-    customer: dict[str, Any] = Field(min_length=1)
-
-
-class PredictionResponse(BaseModel):
-    """Resposta padronizada com probabilidade, classe e threshold."""
-
-    churn_probability: float
-    churn_prediction: int
-    threshold: float
-
-
-def _load_artifacts() -> tuple[object, ChurnMLP, float]:
-    # A API depende dos artefatos gerados pelo treino da MLP.
-    if not PREPROCESSOR_PATH.exists() or not MLP_MODEL_PATH.exists():
+def _load_champion(path: Path | None = None) -> tuple[Pipeline, float]:
+    # O campeao e gerado pelo churn-compare-models. Sem ele nao ha o que servir.
+    path = path or CHAMPION_MODEL_PATH
+    if not path.exists():
         raise FileNotFoundError(
-            "Artefatos nao encontrados. Execute o treino antes de iniciar a API."
+            "Modelo campeao nao encontrado. Rode churn-compare-models antes de subir a API."
         )
 
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-    checkpoint = torch.load(MLP_MODEL_PATH, map_location="cpu", weights_only=False)
-    model = ChurnMLP(
-        input_dim=checkpoint["input_dim"],
-        hidden_dim=checkpoint["hidden_dim"],
-        dropout=checkpoint["dropout"],
-    )
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
-    return preprocessor, model, float(checkpoint.get("threshold", 0.5))
+    key = (str(path), path.stat().st_mtime_ns)
+    if _champion_cache["key"] != key:
+        _champion_cache["artifact"] = joblib.load(path)
+        _champion_cache["key"] = key
+        logger.info("champion_loaded", path=str(path))
+
+    artifact = _champion_cache["artifact"]
+    return artifact["pipeline"], float(artifact["threshold"])
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Endpoint simples para health check de deploy."""
+    """Health check usado pelo Docker e pelo deploy."""
 
     return {"status": "ok"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
-    """Executa pre-processamento, inferencia da MLP e aplica o threshold."""
+    """Roda o pipeline campeao e aplica o threshold escolhido na validacao cruzada."""
 
     try:
-        preprocessor, model, threshold = _load_artifacts()
-        row = pd.DataFrame([request.customer])
-        validate_feature_frame(row)
-        # Garante que a entrada siga a mesma ordem de colunas usada no treino.
-        expected_columns = list(getattr(preprocessor, "feature_names_in_", []))
-        missing = set(expected_columns) - set(row.columns)
-        if missing:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Colunas ausentes no payload: {sorted(missing)}",
-            )
-        row = row[expected_columns]
-        features = preprocessor.transform(row)
-        with torch.no_grad():
-            input_tensor = torch.tensor(features, dtype=torch.float32)
-            probability = float(torch.sigmoid(model(input_tensor)).item())
-        prediction = int(probability >= threshold)
-        logger.info("prediction_served", churn_probability=probability, prediction=prediction)
-        return PredictionResponse(
-            churn_probability=probability,
-            churn_prediction=prediction,
-            threshold=threshold,
-        )
+        pipeline, threshold = _load_champion(CHAMPION_MODEL_PATH)
     except FileNotFoundError as exc:
         logger.info("prediction_failed_missing_artifact", error=str(exc))
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    row = pd.DataFrame([request.customer.model_dump()])
+    # O Pydantic ja garante todos os campos. Isso so pega o caso de um modelo
+    # treinado com colunas que a API nao conhece.
+    expected_columns = list(getattr(pipeline, "feature_names_in_", row.columns))
+    missing = set(expected_columns) - set(row.columns)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Colunas ausentes no payload: {sorted(missing)}",
+        )
+
+    probability = float(pipeline.predict_proba(row[expected_columns])[0, 1])
+    prediction = int(probability >= threshold)
+    logger.info("prediction_served", churn_probability=probability, prediction=prediction)
+    return PredictionResponse(
+        churn_probability=probability,
+        churn_prediction=prediction,
+        threshold=threshold,
+    )

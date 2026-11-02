@@ -53,12 +53,14 @@ de cancelamento.
 
 ## Metricas Tecnicas
 
-- ROC-AUC.
-- PR-AUC.
-- Recall.
-- Precision.
-- F1.
-- Accuracy.
+- **F1 (principal)**: e o criterio de escolha do modelo campeao e do threshold. Equilibra achar
+  quem vai cancelar (recall) com nao gastar campanha em quem ia ficar (precision).
+- **Recall** e **PR-AUC**: acompanham a classe de churn, que e a minoria (26,5%).
+- **ROC-AUC**: mede a capacidade de ordenar clientes por risco, independente do threshold.
+- **Accuracy**: so para referencia. Um modelo que diz "ninguem sai" ja tem 73,5%.
+
+Todas sao medidas com validacao cruzada estratificada de 5 folds (media e desvio) e confirmadas
+uma unica vez no conjunto de teste.
 
 ## Metrica de Negocio Principal
 
@@ -90,18 +92,19 @@ Onde:
 
 ## Criterios de Sucesso
 
-- Modelo superar baseline Dummy em ROC-AUC, recall e F1.
-- Modelo ser comparavel ou superior a regressao logistica em ROC-AUC.
-- Recall adequado para priorizar clientes em risco sem depender apenas de accuracy.
-- Experimentos registrados no MLflow com parametros, metricas e versao do dataset.
+- Superar o baseline Dummy em ROC-AUC, recall e F1. Atingido: o Dummy tem F1 0 e ROC-AUC 0.50;
+  o campeao tem F1 0.64 e ROC-AUC 0.85 na validacao cruzada.
+- Encontrar a maior parte de quem vai cancelar. Atingido: recall de 0.72 no teste.
+- Escolher o modelo com o mesmo processo para todos os candidatos e registrar tudo no MLflow.
 
 ## Decisoes de Engenharia
 
-- PyTorch para MLP.
-- Scikit-Learn para pre-processamento e baseline.
-- MLflow para rastreamento.
-- FastAPI para servico de inferencia.
-- Pytest e Ruff para qualidade.
+- Scikit-Learn para pre-processamento e para todos os modelos candidatos (Regressao Logistica,
+  Random Forest, Gradient Boosting e `MLPClassifier`). O campeao atual e a Regressao Logistica.
+- MLP em PyTorch mantida como experimento extra de comparacao.
+- MLflow para rastreamento dos experimentos.
+- FastAPI para o servico de inferencia, com o payload validado por Pydantic.
+- Pytest e Ruff para qualidade, Docker para deploy.
 
 ## Riscos e Mitigacoes
 
