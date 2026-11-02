@@ -2,7 +2,7 @@ PYTHON_VERSION := 3.14.4
 DATA_PATH := data/raw/churn.csv
 IMAGE_NAME := telco-churn-api
 
-.PHONY: setup sample train-baseline train-mlp compare-models test lint format run mlflow docker-build docker-run
+.PHONY: setup sample train-baseline train-mlp compare-models test lint format check run mlflow docker-build docker-run
 
 setup:
 	uv python install $(PYTHON_VERSION)
@@ -29,6 +29,12 @@ lint:
 
 format:
 	uv run --no-editable --python $(PYTHON_VERSION) ruff format .
+
+# Rodar antes de cada commit: lint, formatacao e testes de uma vez.
+check:
+	uv run --no-editable --python $(PYTHON_VERSION) ruff check .
+	uv run --no-editable --python $(PYTHON_VERSION) ruff format --check .
+	uv run --no-editable --python $(PYTHON_VERSION) pytest
 
 run:
 	uv run --no-editable --python $(PYTHON_VERSION) uvicorn --app-dir src churn.api:app --reload --reload-dir src
