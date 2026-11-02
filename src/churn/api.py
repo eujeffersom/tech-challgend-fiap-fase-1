@@ -5,15 +5,14 @@ from typing import Any
 
 import joblib
 import pandas as pd
-import torch
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
+from sklearn.pipeline import Pipeline
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from churn.config import MLP_MODEL_PATH, PREPROCESSOR_PATH
+from churn.config import CHAMPION_MODEL_PATH
 from churn.features import validate_feature_frame
 from churn.logging_config import get_logger
-from churn.model import ChurnMLP
 
 logger = get_logger(__name__)
 app = FastAPI(title="Churn Prediction API", version="0.1.0")
@@ -54,23 +53,15 @@ class PredictionResponse(BaseModel):
     threshold: float
 
 
-def _load_artifacts() -> tuple[object, ChurnMLP, float]:
-    # A API depende dos artefatos gerados pelo treino da MLP.
-    if not PREPROCESSOR_PATH.exists() or not MLP_MODEL_PATH.exists():
+def _load_champion() -> tuple[Pipeline, float]:
+    # O campeao e gerado pelo churn-compare-models. Sem ele nao ha o que servir.
+    if not CHAMPION_MODEL_PATH.exists():
         raise FileNotFoundError(
-            "Artefatos nao encontrados. Execute o treino antes de iniciar a API."
+            "Modelo campeao nao encontrado. Rode churn-compare-models antes de subir a API."
         )
 
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-    checkpoint = torch.load(MLP_MODEL_PATH, map_location="cpu", weights_only=False)
-    model = ChurnMLP(
-        input_dim=checkpoint["input_dim"],
-        hidden_dim=checkpoint["hidden_dim"],
-        dropout=checkpoint["dropout"],
-    )
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
-    return preprocessor, model, float(checkpoint.get("threshold", 0.5))
+    artifact = joblib.load(CHAMPION_MODEL_PATH)
+    return artifact["pipeline"], float(artifact["threshold"])
 
 
 @app.get("/health")
@@ -82,14 +73,14 @@ def health() -> dict[str, str]:
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
-    """Executa pre-processamento, inferencia da MLP e aplica o threshold."""
+    """Roda o pipeline campeao e aplica o threshold escolhido na validacao cruzada."""
 
     try:
-        preprocessor, model, threshold = _load_artifacts()
+        pipeline, threshold = _load_champion()
         row = pd.DataFrame([request.customer])
         validate_feature_frame(row)
-        # Garante que a entrada siga a mesma ordem de colunas usada no treino.
-        expected_columns = list(getattr(preprocessor, "feature_names_in_", []))
+        # O pipeline espera as colunas na mesma ordem do treino.
+        expected_columns = list(getattr(pipeline, "feature_names_in_", []))
         missing = set(expected_columns) - set(row.columns)
         if missing:
             raise HTTPException(
@@ -97,10 +88,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
                 detail=f"Colunas ausentes no payload: {sorted(missing)}",
             )
         row = row[expected_columns]
-        features = preprocessor.transform(row)
-        with torch.no_grad():
-            input_tensor = torch.tensor(features, dtype=torch.float32)
-            probability = float(torch.sigmoid(model(input_tensor)).item())
+        probability = float(pipeline.predict_proba(row)[0, 1])
         prediction = int(probability >= threshold)
         logger.info("prediction_served", churn_probability=probability, prediction=prediction)
         return PredictionResponse(

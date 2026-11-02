@@ -14,7 +14,7 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 
-from churn.config import MODELS_DIR, RANDOM_SEED
+from churn.config import CHAMPION_MODEL_PATH, MODELS_DIR, RANDOM_SEED
 from churn.data import load_churn_csv, split_features_target
 from churn.features import build_preprocessor
 from churn.logging_config import get_logger
@@ -30,6 +30,28 @@ COMPARISON_MD = REPORTS_DIR / "model_comparison.md"
 CV_FOLDS = 5
 # Metricas que entram na tabela com media e desvio dos folds.
 CV_METRICS = ["roc_auc", "pr_auc", "f1", "recall", "precision"]
+# Criterio do campeao. F1 porque equilibra achar quem vai sair (recall) com nao
+# gastar campanha em quem ia ficar (precision).
+CHAMPION_METRIC = "cv_f1_mean"
+
+
+def select_champion(comparison: pd.DataFrame, candidates: list[str]) -> str:
+    """Pega o modelo com maior F1 medio na CV entre os candidatos do Scikit-Learn."""
+
+    eligible = comparison[comparison["model"].isin(candidates)]
+    if eligible.empty:
+        raise ValueError("Nenhum candidato disponivel para escolher o campeao.")
+    return str(eligible.sort_values(CHAMPION_METRIC, ascending=False).iloc[0]["model"])
+
+
+def save_champion(pipeline: Pipeline, *, model_name: str, threshold: float, path: Path) -> None:
+    """Salva o pipeline junto com o threshold, que e tudo que a API precisa."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(
+        {"model_name": model_name, "threshold": threshold, "pipeline": pipeline},
+        path,
+    )
 
 
 def build_candidate_models() -> dict[str, object]:
@@ -92,7 +114,8 @@ def cross_validate_with_threshold(
         summary[f"cv_{metric}_mean"] = float(np.mean(values))
         summary[f"cv_{metric}_std"] = float(np.std(values))
 
-    threshold = float(np.mean([fold["threshold"] for fold in fold_results]))
+    # Arredonda para nao carregar ruido de ponto flutuante (0.5800000000000002).
+    threshold = round(float(np.mean([fold["threshold"] for fold in fold_results])), 4)
     return threshold, summary
 
 
@@ -149,6 +172,7 @@ def compare_models(
     }
 
     rows = []
+    fitted: dict[str, tuple[Pipeline, float]] = {}
     mlflow.set_experiment("churn_model_comparison")
     for model_name, estimator in build_candidate_models().items():
         pipeline = Pipeline(
@@ -166,6 +190,7 @@ def compare_models(
         )
         row = {"model": model_name, "threshold": threshold} | cv_summary | test_summary
         rows.append(row)
+        fitted[model_name] = (pipeline, threshold)
         logger.info("model_evaluated", model=model_name, cv_f1=cv_summary["cv_f1_mean"])
 
         artifact_path = MODELS_DIR / f"{model_name}.joblib"
@@ -191,14 +216,28 @@ def compare_models(
         rows.append(_pytorch_row(mlp))
 
     comparison = pd.DataFrame(rows).sort_values("cv_f1_mean", ascending=False)
+
+    # O campeao sai so dos modelos Scikit-Learn, que viram um .joblib unico.
+    champion = select_champion(comparison, candidates=list(fitted))
+    champion_pipeline, champion_threshold = fitted[champion]
+    save_champion(
+        champion_pipeline,
+        model_name=champion,
+        threshold=champion_threshold,
+        path=CHAMPION_MODEL_PATH,
+    )
+    comparison["champion"] = comparison["model"] == champion
+
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     comparison.to_csv(COMPARISON_CSV, index=False)
-    COMPARISON_MD.write_text(_to_markdown_table(comparison), encoding="utf-8")
+    COMPARISON_MD.write_text(_to_markdown_table(comparison, champion), encoding="utf-8")
     logger.info(
         "model_comparison_created",
         csv=str(COMPARISON_CSV),
         markdown=str(COMPARISON_MD),
         models=len(comparison),
+        champion=champion,
+        champion_path=str(CHAMPION_MODEL_PATH),
     )
     return comparison
 
@@ -217,7 +256,7 @@ def _pytorch_row(mlp_metrics: dict[str, float]) -> dict[str, float | str]:
     return row
 
 
-def _to_markdown_table(df: pd.DataFrame) -> str:
+def _to_markdown_table(df: pd.DataFrame, champion: str) -> str:
     """Tabela enxuta para o README e o Model Card. O CSV guarda todas as colunas."""
 
     columns = {
@@ -235,7 +274,8 @@ def _to_markdown_table(df: pd.DataFrame) -> str:
     separator = "| --- |" + " ---: |" * (len(columns) - 1)
     lines = [header, separator]
     for record in df.to_dict(orient="records"):
-        cells = [str(record["model"])]
+        name = str(record["model"])
+        cells = [f"**{name}** (campeao)" if name == champion else name]
         for key in list(columns)[1:]:
             value = float(record[key])
             std_key = key.replace("_mean", "_std")
@@ -248,7 +288,11 @@ def _to_markdown_table(df: pd.DataFrame) -> str:
             else:
                 cells.append(f"{value:.4f}")
         lines.append("| " + " | ".join(cells) + " |")
-    return "\n".join(lines) + "\n"
+    note = (
+        f"\nCampeao: `{champion}`, maior F1 medio na validacao cruzada entre os modelos "
+        "Scikit-Learn. Salvo em `models/champion.joblib` e servido pela API.\n"
+    )
+    return "\n".join(lines) + "\n" + note
 
 
 def main() -> None:
