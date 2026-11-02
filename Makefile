@@ -4,10 +4,11 @@ IMAGE_NAME := telco-churn-api
 
 .PHONY: setup sample train-baseline train-mlp compare-models notebook test lint format check run mlflow docker-build docker-run
 
+# O uv sync cria o .venv se ele nao existir, e reaproveita se ja existir (inclusive
+# quando o .venv e um link para .venv.nosync).
 setup:
 	uv python install $(PYTHON_VERSION)
-	uv venv --python $(PYTHON_VERSION)
-	uv sync --all-groups --no-editable
+	uv sync --all-groups --no-editable --python $(PYTHON_VERSION)
 
 sample:
 	uv run --no-editable --python $(PYTHON_VERSION) churn-generate-sample --output $(DATA_PATH) --rows 1000

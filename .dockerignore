@@ -1,6 +1,8 @@
 # Ambiente local e caches
 .git/
+.venv
 .venv/
+*.nosync
 .pytest_cache/
 .ruff_cache/
 __pycache__/

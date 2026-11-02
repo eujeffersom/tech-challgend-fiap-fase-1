@@ -4,8 +4,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.venv
 .venv/
 venv/
+# Pastas com .nosync ficam fora do iCloud (ex.: .venv.nosync no macOS)
+*.nosync
 
 # Packaging
 dist/
