@@ -36,10 +36,3 @@ def build_preprocessor(df: pd.DataFrame) -> ColumnTransformer:
             ("cat", categorical_pipeline, categorical_columns),
         ]
     )
-
-
-def validate_feature_frame(df: pd.DataFrame) -> None:
-    """Valida regras minimas para payloads de inferencia."""
-
-    if df.empty:
-        raise ValueError("Payload de entrada vazio.")

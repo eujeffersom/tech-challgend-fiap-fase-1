@@ -19,28 +19,3 @@ MLP_MODEL_PATH = MODELS_DIR / "churn_mlp.pt"
 BASELINE_MODEL_PATH = MODELS_DIR / "baseline_logreg.joblib"
 # Modelo que a API serve: pipeline completo + threshold, gerado pelo compare_models.
 CHAMPION_MODEL_PATH = MODELS_DIR / "champion.joblib"
-
-CATEGORICAL_COLUMNS = [
-    "gender",
-    "Partner",
-    "Dependents",
-    "PhoneService",
-    "MultipleLines",
-    "InternetService",
-    "OnlineSecurity",
-    "OnlineBackup",
-    "DeviceProtection",
-    "TechSupport",
-    "StreamingTV",
-    "StreamingMovies",
-    "Contract",
-    "PaperlessBilling",
-    "PaymentMethod",
-]
-
-NUMERIC_COLUMNS = [
-    "SeniorCitizen",
-    "tenure",
-    "MonthlyCharges",
-    "TotalCharges",
-]

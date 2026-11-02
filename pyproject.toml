@@ -1,7 +1,7 @@
 [project]
 name = "tech-challenge-churn"
-version = "0.1.0"
-description = "Rede neural MLP com pipeline end-to-end para previsao de churn em telecom."
+version = "0.2.0"
+description = "Pipeline de previsao de churn em telecom: EDA, comparacao de modelos Scikit-Learn e API FastAPI."
 readme = "README.md"
 requires-python = ">=3.14.4,<3.15"
 # So o que a API precisa para servir o modelo. E isso que vai para a imagem Docker.

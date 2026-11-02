@@ -20,7 +20,7 @@ uma jornada de retencao.
 Escolha da entrega: **real-time como caminho principal**.
 
 Batch pode ser adicionado como complemento futuro para campanhas diarias ou semanais, usando o mesmo
-preprocessor e o mesmo modelo versionado.
+`champion.joblib` que a API carrega.
 
 ## 3. Componentes
 
@@ -28,38 +28,42 @@ preprocessor e o mesmo modelo versionado.
 - `src/churn/schema.py`: validacao de schema com Pandera.
 - `src/churn/features.py`: pipeline de pre-processamento com Scikit-Learn.
 - `src/churn/baseline.py`: baseline de regressao logistica.
-- `src/churn/compare_models.py`: comparacao entre modelo linear, arvores, ensemble e MLP.
-- `src/churn/train.py`: treinamento da MLP PyTorch com batching, early stopping e validacao cruzada.
-- `mlruns/`: tracking local de experimentos no MLflow.
-- `models/`: artefatos locais do modelo.
-- `src/churn/api.py`: API FastAPI com `/health`, `/predict`, Pydantic, logging estruturado e middleware de latencia.
-- `Dockerfile`: empacotamento da API para deploy.
+- `src/churn/compare_models.py`: compara os candidatos com a mesma validacao cruzada e salva o
+  campeao em `models/champion.joblib`.
+- `src/churn/train.py`: MLP PyTorch, mantida como experimento extra.
+- `mlflow.db`: tracking local dos experimentos no MLflow.
+- `models/champion.joblib`: pipeline campeao + threshold. E o unico artefato que vai para o Git
+  e para a imagem Docker.
+- `src/churn/api.py` e `src/churn/api_models.py`: API FastAPI com `/health`, `/predict`,
+  validacao do payload, logging estruturado e middleware de latencia.
+- `Dockerfile`: imagem em dois estagios, so com as dependencias da API e o modelo campeao.
 
 ## 4. Fluxo de Treinamento
 
 1. Baixar o dataset Telco Customer Churn e salvar em `data/raw/churn.csv`.
 2. Validar schema e regras basicas com Pandera.
 3. Separar treino e teste com estratificacao.
-4. Ajustar preprocessor no treino.
-5. Treinar baselines e MLP.
-6. Registrar parametros, metricas e artefatos no MLflow.
-7. Persistir artefatos em `models/`.
-8. Gerar tabela comparativa em `docs/reports/model_comparison.md`.
+4. Rodar a mesma validacao cruzada para todos os candidatos, com o pre-processamento ajustado
+   dentro de cada fold.
+5. Escolher o threshold e o campeao so com a validacao cruzada.
+6. Medir o campeao uma vez no teste.
+7. Registrar parametros, metricas e artefatos no MLflow.
+8. Salvar `models/champion.joblib` e gerar `docs/reports/model_comparison.md`.
 
 ## 5. Fluxo de Inferencia
 
 1. Cliente interno chama `POST /predict`.
 2. Pydantic valida o payload da requisicao.
-3. API aplica o mesmo preprocessor salvo no treino.
-4. MLP calcula o logit e a probabilidade de churn.
-5. API aplica o threshold salvo/configurado.
+3. API usa o pipeline campeao, que ja traz o pre-processamento ajustado no treino.
+4. O modelo calcula a probabilidade de churn.
+5. API aplica o threshold salvo junto com o modelo.
 6. Resposta retorna classe prevista, probabilidade e threshold.
 7. Middleware registra latencia e logs estruturados.
 
 ## 6. Deploy Sugerido
 
-1. Treinar o modelo e gerar artefatos.
-2. Executar testes e lint.
+1. Rodar `make compare-models` e versionar o `champion.joblib` gerado.
+2. Executar `make check`.
 3. Buildar a imagem Docker.
 4. Publicar a imagem em um registry.
 5. Subir a API em Cloud Run, AWS Fargate, ECS ou Kubernetes.
@@ -70,9 +74,9 @@ preprocessor e o mesmo modelo versionado.
 Comandos locais:
 
 ```bash
-uv run --no-editable --python 3.14.4 churn-train-mlp --data data/raw/churn.csv --epochs 40
-docker build -t telco-churn-api .
-docker run -p 8000:8000 telco-churn-api
+make compare-models
+make docker-build
+make docker-run
 ```
 
 URL local da API:

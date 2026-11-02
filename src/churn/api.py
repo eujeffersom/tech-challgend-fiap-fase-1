@@ -9,12 +9,13 @@ from fastapi import FastAPI, HTTPException, Request
 from sklearn.pipeline import Pipeline
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from churn import __version__
 from churn.api_models import PredictionRequest, PredictionResponse
 from churn.config import CHAMPION_MODEL_PATH
 from churn.logging_config import get_logger
 
 logger = get_logger(__name__)
-app = FastAPI(title="Churn Prediction API", version="0.2.0")
+app = FastAPI(title="Churn Prediction API", version=__version__)
 
 # Guarda o campeao em memoria. A chave inclui a data de modificacao do arquivo,
 # entao se o modelo for retreinado a API pega a versao nova sem precisar reiniciar.

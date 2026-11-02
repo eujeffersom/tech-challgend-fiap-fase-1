@@ -65,7 +65,7 @@ retencao mudar.
 ### Alerta de API indisponivel
 
 1. Verificar `/health` e logs recentes.
-2. Confirmar se a imagem Docker subiu com os artefatos em `models/`.
+2. Confirmar se a imagem Docker subiu com o `models/champion.joblib`.
 3. Validar variaveis de ambiente e permissao de leitura dos artefatos.
 4. Fazer rollback para a ultima imagem saudavel se a falha for de release.
 5. Registrar incidente e causa raiz.
@@ -73,7 +73,7 @@ retencao mudar.
 ### Alerta de schema ou erro 4xx
 
 1. Coletar exemplos anonimizados de payloads com falha.
-2. Comparar payload com `PredictionRequest` e schema de treino.
+2. Comparar o payload com o `Customer` em `src/churn/api_models.py`.
 3. Confirmar se houve mudanca no sistema origem.
 4. Corrigir contrato de dados ou adicionar transformacao controlada.
 5. Criar teste automatizado para o caso novo.

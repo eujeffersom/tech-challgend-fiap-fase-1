@@ -8,7 +8,7 @@
 FROM python:3.14.4-slim AS build
 
 # uv com versao fixa, direto da imagem oficial (antes era "pip install uv" sem versao).
-COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
 
 # Compila os .pyc no build (a API sobe mais rapido) e usa o Python da imagem,
 # sem baixar outro.
