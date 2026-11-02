@@ -37,6 +37,11 @@ churn-train-mlp = "churn.train:main"
 requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
+[tool.uv]
+# Por padrao o uv so reinstala o pacote quando o pyproject.toml muda. Como os
+# comandos rodam com --no-editable, mudancas em src/ ficavam de fora sem isso.
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
