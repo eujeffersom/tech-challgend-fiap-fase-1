@@ -82,3 +82,34 @@ def test_predict_returns_503_without_model(tmp_path, monkeypatch) -> None:
     client = TestClient(api.app)
     response = client.post("/predict", json={"customer": CUSTOMER})
     assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("tenure", "abc"),  # tipo errado, antes dava 500
+        ("tenure", -5),  # negativo nao existe
+        ("Contract", "XYZ"),  # categoria que o modelo nunca viu, antes passava como 200
+        ("SeniorCitizen", 2),
+    ],
+)
+def test_predict_rejects_invalid_values(fake_champion, field, value) -> None:
+    client = TestClient(api.app)
+    customer = CUSTOMER | {field: value}
+    response = client.post("/predict", json={"customer": customer})
+    assert response.status_code == 422
+
+
+def test_predict_accepts_blank_total_charges(fake_champion) -> None:
+    # Cliente recem-chegado vem sem TotalCharges no dataset original.
+    client = TestClient(api.app)
+    customer = CUSTOMER | {"tenure": 0, "TotalCharges": None}
+    response = client.post("/predict", json={"customer": customer})
+    assert response.status_code == 200
+
+
+def test_predict_ignores_extra_fields(fake_champion) -> None:
+    client = TestClient(api.app)
+    customer = CUSTOMER | {"customerID": "7590-VHVEG"}
+    response = client.post("/predict", json={"customer": customer})
+    assert response.status_code == 200
