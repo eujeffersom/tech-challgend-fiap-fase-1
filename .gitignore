@@ -18,6 +18,8 @@ mlflow.db
 models/*.pt
 models/*.joblib
 models/*.pkl
+# O campeao vai pro Git: e pequeno (~8 KB) e sem ele a API nao sobe num clone novo.
+!models/champion.joblib
 notebooks/figures/
 !docs/reports/
 !docs/reports/*.md

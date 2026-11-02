@@ -1,15 +1,33 @@
+# Ambiente local e caches
 .git/
 .venv/
 .pytest_cache/
 .ruff_cache/
 __pycache__/
 *.pyc
+build/
+*.egg-info/
 .DS_Store
 
-data/raw/*
-data/processed/*
+# Segredos nunca entram na imagem, nem por engano
+.env
+.env.*
+
+# Dados e experimentos ficam fora (sao grandes e a API nao usa)
+data/
 mlruns/
 mlflow.db
+
+# Dos modelos, so o campeao vai para a imagem
+models/*
+!models/champion.joblib
+
+# Coisas que nao rodam dentro do container
+tests/
+notebooks/
+docs/
+Makefile
+dev.sh
+dev.cmd
 anotacoes
 README 2.md
-docs/final_validation_report.md

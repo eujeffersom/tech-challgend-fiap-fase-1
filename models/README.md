@@ -1,23 +1,35 @@
 # Modelos
 
-Artefatos treinados sao salvos localmente nesta pasta apos executar os comandos de treino.
+## O que vai para o Git
 
-## Artefatos principais
+- `champion.joblib`: modelo que a API serve. E um dicionario com o pipeline completo
+  (pre-processamento + classificador), o threshold escolhido na validacao cruzada e o nome
+  do modelo. Fica versionado para a API e o Docker funcionarem logo depois do clone.
 
-- `churn_mlp.pt`: checkpoint PyTorch da MLP principal, incluindo pesos e threshold.
-- `preprocessor.joblib`: pre-processador Scikit-Learn usado pela MLP e pela API.
-- `baseline_logreg.joblib`: baseline de Regressao Logistica gerada por `churn-train-baseline`.
+Hoje o campeao e a Regressao Logistica. O criterio e o maior F1 medio na validacao cruzada
+entre os modelos Scikit-Learn (ver `docs/reports/model_comparison.md`).
 
-## Artefatos da comparacao de modelos
+## O que fica so na maquina
 
-Gerados por `churn-compare-models`:
+Gerados por `churn-compare-models` e ignorados pelo Git:
 
-- `logistic_regression.joblib`: Regressao Logistica usada na tabela comparativa.
-- `random_forest.joblib`: Random Forest usada na tabela comparativa.
-- `gradient_boosting.joblib`: Gradient Boosting usado na tabela comparativa.
+- `logistic_regression.joblib`, `random_forest.joblib`, `gradient_boosting.joblib`,
+  `mlp_classifier.joblib`: cada candidato da comparacao, ja treinado.
+- `churn_mlp.pt` e `preprocessor.joblib`: MLP PyTorch, mantida como experimento extra.
 
-## Observacoes
+Gerado por `churn-train-baseline`:
 
-- Os arquivos `.pt`, `.joblib` e `.pkl` sao ignorados pelo Git por padrao.
-- Para recriar os artefatos, execute os comandos de treino no `README.md` da raiz.
-- A API espera encontrar `churn_mlp.pt` e `preprocessor.joblib` neste diretorio.
+- `baseline_logreg.joblib`: baseline de Regressao Logistica.
+
+## Como recriar
+
+```bash
+make compare-models
+```
+
+Isso retreina tudo e sobrescreve o `champion.joblib`. Se o ranking mudar, o campeao muda junto.
+
+## Cuidado com versoes
+
+O `.joblib` depende da versao do Scikit-Learn usada no treino. Use sempre o ambiente do
+`uv.lock` (`make setup`) para treinar e para rodar a API.

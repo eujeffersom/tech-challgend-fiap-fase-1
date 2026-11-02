@@ -1,53 +1,65 @@
-FROM python:3.14-slim
+# syntax=docker/dockerfile:1
 
-# Metadados da imagem.
-LABEL maintainer="Grupo 30"
-LABEL version="0.1.0"
-LABEL description="API de predicao de Churn de Telecom"
+# ---------------------------------------------------------------------------
+# Estagio 1: monta o .venv com as dependencias travadas no uv.lock
+# ---------------------------------------------------------------------------
+# Mesma versao do .python-version. Os dois estagios usam a mesma imagem para o
+# Python do .venv existir no mesmo caminho na imagem final.
+FROM python:3.14.4-slim AS build
 
-# Variaveis de ambiente para logs previsiveis e sem arquivos .pyc.
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_SYSTEM_PYTHON=1
+# uv com versao fixa, direto da imagem oficial (antes era "pip install uv" sem versao).
+COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /uvx /bin/
 
-# Diretorio padrao da aplicacao.
+# Compila os .pyc no build (a API sobe mais rapido) e usa o Python da imagem,
+# sem baixar outro.
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
+
 WORKDIR /app
 
-# Dependencias de sistema: curl para healthcheck e build-essential para libs Python nativas.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Instala o uv para respeitar pyproject.toml e uv.lock como fonte das dependencias.
-RUN pip install --no-cache-dir uv
-
-# Copia metadados primeiro para aproveitar cache de camadas das dependencias.
+# Primeiro so as dependencias: se mudar apenas o codigo, o Docker reaproveita essa camada.
+# --no-default-groups deixa de fora treino (torch, mlflow...) e dev. A API nao usa nada disso.
 COPY pyproject.toml uv.lock README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-default-groups --no-editable --no-install-project
 
-# Instala apenas dependencias de producao antes de copiar o codigo.
-RUN uv sync --frozen --no-dev --no-editable --no-install-project
-
-# Copia o codigo fonte e os artefatos locais necessarios para a API.
 COPY src/ ./src/
-COPY models/ ./models/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-default-groups --no-editable
 
-# Instala o pacote do projeto apos o codigo fonte estar disponivel.
-RUN uv sync --frozen --no-dev --no-editable
+# ---------------------------------------------------------------------------
+# Estagio 2: imagem final, so com Python, o .venv e o modelo
+# ---------------------------------------------------------------------------
+FROM python:3.14.4-slim AS runtime
 
-# Cria usuario nao-root e ajusta permissoes para reduzir risco no runtime.
-RUN useradd --create-home --shell /bin/bash appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+LABEL org.opencontainers.image.title="telco-churn-api" \
+      org.opencontainers.image.description="API de predicao de churn de telecom" \
+      org.opencontainers.image.version="0.2.0" \
+      org.opencontainers.image.source="https://github.com/eujeffersom/tech-challgend-fiap-fase-1"
 
-# Porta usada pela API FastAPI.
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    CHURN_PROJECT_ROOT=/app
+
+# Usuario sem privilegio e sem shell de login. Os arquivos continuam do root,
+# entao a API consegue ler o codigo e o modelo, mas nao alterar.
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
+
+WORKDIR /app
+
+# O pacote ja esta instalado dentro do .venv, nao precisa copiar o src/.
+COPY --from=build /app/.venv /app/.venv
+COPY models/champion.joblib /app/models/champion.joblib
+
+USER app
+
 EXPOSE 8000
 
-# Healthcheck usado por Docker, ECS, Fargate, Cloud Run ou orquestradores similares.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Healthcheck com o proprio Python, assim nao precisa instalar curl na imagem.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
 
-# Sobe a API de inferencia em modo producao.
-CMD ["uv", "run", "--no-sync", "uvicorn", "--app-dir", "src", "churn.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "churn.api:app", "--host", "0.0.0.0", "--port", "8000"]
