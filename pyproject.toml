@@ -25,6 +25,12 @@ train = [
     "pandera>=0.26.0",
     "torch>=2.10.0",
 ]
+# Para abrir e executar os notebooks de EDA.
+notebook = [
+    "ipykernel>=6.29.0",
+    "matplotlib>=3.9.0",
+    "nbconvert>=7.16.0",
+]
 dev = [
     "httpx>=0.28.0",
     "pytest>=8.3.0",
@@ -43,8 +49,8 @@ requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
-# uv sync e uv run instalam treino e dev por padrao, entao nada muda no dia a dia.
-default-groups = ["dev", "train"]
+# uv sync e uv run instalam treino, notebook e dev por padrao, entao nada muda no dia a dia.
+default-groups = ["dev", "train", "notebook"]
 # Por padrao o uv so reinstala o pacote quando o pyproject.toml muda. Como os
 # comandos rodam com --no-editable, mudancas em src/ ficavam de fora sem isso.
 cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
@@ -67,6 +73,11 @@ select = ["E", "F", "I", "B", "UP", "N", "S", "LOG"]
 ignore = [
     "S101",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Gerado a partir do .ipynb (make notebook). Expressao solta como df.head() e o jeito de
+# mostrar tabela no notebook, e as linhas longas vem das tabelas em markdown.
+"notebooks/*.py" = ["B018", "E402", "E501", "UP009"]
 
 [tool.ruff.format]
 quote-style = "double"

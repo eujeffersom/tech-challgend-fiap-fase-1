@@ -2,7 +2,7 @@ PYTHON_VERSION := 3.14.4
 DATA_PATH := data/raw/churn.csv
 IMAGE_NAME := telco-churn-api
 
-.PHONY: setup sample train-baseline train-mlp compare-models test lint format check run mlflow docker-build docker-run
+.PHONY: setup sample train-baseline train-mlp compare-models notebook test lint format check run mlflow docker-build docker-run
 
 setup:
 	uv python install $(PYTHON_VERSION)
@@ -20,6 +20,12 @@ train-mlp:
 
 compare-models:
 	uv run --no-editable --python $(PYTHON_VERSION) churn-compare-models --data $(DATA_PATH) --epochs 40
+
+# Reexecuta o notebook de EDA salvando as saidas e gera o .py com o mesmo conteudo.
+notebook:
+	uv run --no-editable --python $(PYTHON_VERSION) jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda_e_baselines.ipynb
+	uv run --no-editable --python $(PYTHON_VERSION) jupyter nbconvert --to script notebooks/01_eda_e_baselines.ipynb
+	uv run --no-editable --python $(PYTHON_VERSION) ruff format notebooks/
 
 test:
 	uv run --no-editable --python $(PYTHON_VERSION) pytest
